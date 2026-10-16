@@ -24,6 +24,7 @@
   ],
   "scripts": {
     "build": "node scripts/generate-tokens.mjs && tsup",
+    "check-types": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {

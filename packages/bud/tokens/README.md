@@ -55,25 +55,25 @@ Tailwind는 배치(flex, grid, gap 등)에만 쓰고, 색·글자·모서리는 
 
 ## 토큰 구조
 
-| 내보내기 | 내용 | 예시 |
-| --- | --- | --- |
-| `vars.color` | 배경·텍스트·테두리·아이콘·그라데이션 색 | `vars.color.text.default` |
-| `vars.typography` | 스타일별 크기·굵기·행간·자간 | `vars.typography.header.h1.size` |
-| `vars.spacing` | 간격 (none ~ 4xl) | `vars.spacing.md` → 16px |
-| `vars.radius` | 모서리 (none ~ full) | `vars.radius.full` → 100px |
-| `vars.shadow` | 그림자 | `vars.shadow.modal` |
-| `vars.shadowColor` | 그림자·오버레이 색 | `vars.shadowColor.overlay` |
-| `text` | 텍스트 스타일 클래스 20개 | `text.caption.caption1.bold` |
-| `primitive` | 원본 값. 화면에서는 직접 쓰지 않아요 | `primitive.color.gray['900']` |
+| 내보내기           | 내용                                    | 예시                             |
+| ------------------ | --------------------------------------- | -------------------------------- |
+| `vars.color`       | 배경·텍스트·테두리·아이콘·그라데이션 색 | `vars.color.text.default`        |
+| `vars.typography`  | 스타일별 크기·굵기·행간·자간            | `vars.typography.header.h1.size` |
+| `vars.spacing`     | 간격 (none ~ 4xl)                       | `vars.spacing.md` → 16px         |
+| `vars.radius`      | 모서리 (none ~ full)                    | `vars.radius.full` → 100px       |
+| `vars.shadow`      | 그림자                                  | `vars.shadow.modal`              |
+| `vars.shadowColor` | 그림자·오버레이 색                      | `vars.shadowColor.overlay`       |
+| `text`             | 텍스트 스타일 클래스 20개               | `text.caption.caption1.bold`     |
+| `primitive`        | 원본 값. 화면에서는 직접 쓰지 않아요    | `primitive.color.gray['900']`    |
 
 ## 피그마 이름과 코드 이름
 
-| 피그마 변수 | vanilla-extract | CSS 변수 |
-| --- | --- | --- |
-| `bg/primary-hover` | `vars.color.bg.primaryHover` | `--bud-color-bg-primary-hover` |
-| `header/h1/line-height` | `vars.typography.header.h1.lineHeight` | `--bud-typography-header-h1-line-height` |
-| `spacing/spacing-md` | `vars.spacing.md` | `--bud-spacing-md` |
-| `gray/gray900` (Primitive) | `primitive.color.gray['900']` | `--bud-color-gray-900` |
+| 피그마 변수                | vanilla-extract                        | CSS 변수                                 |
+| -------------------------- | -------------------------------------- | ---------------------------------------- |
+| `bg/primary-hover`         | `vars.color.bg.primaryHover`           | `--bud-color-bg-primary-hover`           |
+| `header/h1/line-height`    | `vars.typography.header.h1.lineHeight` | `--bud-typography-header-h1-line-height` |
+| `spacing/spacing-md`       | `vars.spacing.md`                      | `--bud-spacing-md`                       |
+| `gray/gray900` (Primitive) | `primitive.color.gray['900']`          | `--bud-color-gray-900`                   |
 
 규칙은 세 가지예요.
 
