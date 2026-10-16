@@ -1,0 +1,13 @@
+**/node_modules/**
+**/dist/**
+**/.next/**
+**/.turbo/**
+**/coverage/**
+pnpm-lock.yaml
+
+# Figma 내보내기 파일과 자동 생성 소스는 기존 형식을 유지합니다.
+packages/bud/tokens/figma/variables.json
+packages/bud/tokens/src/tokens/**
+
+# 별도 후속 작업 전까지 기존 토큰 생성 스크립트를 수정하지 않습니다.
+packages/bud/tokens/scripts/generate-tokens.mjs
