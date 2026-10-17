@@ -35,43 +35,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Check formatting
-        id: format
-        continue-on-error: true
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm format:check
 
       - name: Lint
-        id: lint
-        continue-on-error: true
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm lint
 
       - name: Check types
-        id: types
-        continue-on-error: true
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm check-types
 
       - name: Build
-        id: build
-        continue-on-error: true
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm build
-
-      - name: Require all implemented checks to pass
-        if: always()
-        env:
-          CHECK_RESULTS: >-
-            ${{ steps.install.outcome }}
-            ${{ steps.format.outcome }}
-            ${{ steps.lint.outcome }}
-            ${{ steps.types.outcome }}
-            ${{ steps.build.outcome }}
-        run: |
-          read -r -a check_results <<< "$CHECK_RESULTS"
-          if [ "${#check_results[@]}" -ne 5 ]; then
-            echo 'CI results are incomplete. See the step logs.'
-            exit 1
-          fi
-          for result in "${check_results[@]}"; do
-            if [ "$result" != 'success' ]; then
-              echo 'An implemented CI check failed or did not run. See the step logs.'
-              exit 1
-            fi
-          done
