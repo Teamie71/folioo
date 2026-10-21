@@ -5,8 +5,8 @@ body:
     id: question
     attributes:
       label: 결정할 질문
-      description: 무엇을 조사하거나 결정해야 하나요?
-      placeholder: 데스크톱 앱 구현에 Electron과 Tauri 중 무엇을 사용할까요?
+      description: 무엇을 조사하거나 결정, 설계해야 하나요?
+      placeholder: 기술 조사, 대안 비교, 구현 전 설계 등 조사 내용을 적어 주세요.
     validations:
       required: true
 

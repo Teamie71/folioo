@@ -6,7 +6,7 @@ body:
     attributes:
       label: Purpose
       description: 어떤 문제를 해결하거나 무엇을 개선하나요?
-      placeholder: 검색 결과가 없을 때 안내 화면을 표시합니다.
+      placeholder: 기능 개발, 리팩터링, 설정 변경, 문서 작업 등 작업 내용을 적어 주세요.
     validations:
       required: true
 
@@ -24,4 +24,4 @@ body:
     id: context
     attributes:
       label: 참고 사항
-      description: 작업 범위, 제외 범위, 관련 디자인·문서, 의존 작업을 적어 주세요.
+      description: 리서치 자료, 구현 배경, 작업 범위, 제외 범위, 관련 디자인·문서, 의존 작업을 적어 주세요.
