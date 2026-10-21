@@ -4,7 +4,7 @@ body:
   - type: textarea
     id: purpose
     attributes:
-      label: Purpose
+      label: 목적
       description: 어떤 문제를 해결하거나 무엇을 개선하나요?
       placeholder: 기능 개발, 리팩터링, 설정 변경, 문서 작업 등 작업 내용을 적어 주세요.
     validations:
