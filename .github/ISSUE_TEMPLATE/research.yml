@@ -1,0 +1,33 @@
+name: Research & Design
+description: Stack Research, Alternative Comparison, Pre-implementation Design
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: 결정할 질문
+      description: 무엇을 조사하거나 결정해야 하나요?
+      placeholder: 데스크톱 앱 구현에 Electron과 Tauri 중 무엇을 사용할까요?
+    validations:
+      required: true
+
+  - type: textarea
+    id: criteria
+    attributes:
+      label: 비교 기준
+      description: 후보, 비용, 사용성, 구현 난이도, 운영 부담, 제약 등을 적어 주세요.
+
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: 완료 조건
+      description: 비교표, 권장안과 근거, 검증 결과 등 구체적인 결과물을 적어 주세요.
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 자료
+      description: 관련 문서, 링크, 기존 논의 등을 적어 주세요.

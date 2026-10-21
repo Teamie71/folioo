@@ -1,0 +1,49 @@
+name: Bug
+description: Bug Report
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: 발생 환경
+      description: 발생 위치와 실행 환경을 적어 주세요.
+      placeholder: |
+        페이지 주소:
+        환경: 로컬 / 개발 / 프로덕션
+        브라우저·OS:
+        로그인 상태:
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 재현 순서
+      description: 다른 사람이 따라 할 수 있는 순서를 적어 주세요.
+      placeholder: |
+        1. 검색 페이지에 접속합니다.
+        2. 결과가 없는 키워드를 입력합니다.
+        3. 검색 버튼을 누릅니다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 현재 동작
+      description: 실제로 어떤 일이 발생했나요?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 동작
+      description: 어떻게 동작해야 하나요?
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 참고 자료
+      description: 스크린샷, 영상, 오류 로그, 발생 빈도 등을 첨부해 주세요. 개인정보와 토큰은 제외합니다.
