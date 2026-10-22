@@ -427,11 +427,29 @@
               "isAlias": true,
               "value": {
                 "collection": "Primitive: Colors",
+                "name": "state/success/primary"
+              }
+            },
+            {
+              "name": "bg/success-light",
+              "type": "color",
+              "isAlias": true,
+              "value": {
+                "collection": "Primitive: Colors",
                 "name": "state/success/secondary"
               }
             },
             {
               "name": "bg/error",
+              "type": "color",
+              "isAlias": true,
+              "value": {
+                "collection": "Primitive: Colors",
+                "name": "state/error/primary"
+              }
+            },
+            {
+              "name": "bg/error-light",
               "type": "color",
               "isAlias": true,
               "value": {
@@ -545,6 +563,15 @@
               "value": {
                 "collection": "Primitive: Colors",
                 "name": "main/primary/primary1"
+              }
+            },
+            {
+              "name": "text/error",
+              "type": "color",
+              "isAlias": true,
+              "value": {
+                "collection": "Primitive: Colors",
+                "name": "state/error/primary"
               }
             },
             {

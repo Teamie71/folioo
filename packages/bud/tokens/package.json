@@ -1,6 +1,6 @@
 {
   "name": "@folioo/bud-tokens",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Bud design tokens (Folioo design system) built with vanilla-extract",
   "license": "MIT",
   "type": "module",
