@@ -1,0 +1,16 @@
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import '@folioo/bud-tokens/style.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@source '../';
+
+@layer base {
+  body {
+    background: var(--bud-color-bg-default);
+    color: var(--bud-color-text-default);
+    font-family: var(--bud-typography-font-default), sans-serif;
+  }
+}
