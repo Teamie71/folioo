@@ -5,6 +5,9 @@
 **/coverage/**
 pnpm-lock.yaml
 
+# Next.js가 자동 생성하므로 포맷 검사에서 제외합니다.
+apps/web/next-env.d.ts
+
 # Figma 내보내기 파일과 자동 생성 소스는 기존 형식을 유지합니다.
 packages/bud/tokens/figma/variables.json
 packages/bud/tokens/src/tokens/**

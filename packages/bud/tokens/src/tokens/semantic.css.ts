@@ -16,8 +16,10 @@ const values = {
       unactive: primitive.color.gray["400"], // Semantic: Colors / bg/unactive
       unselected: primitive.color.gray["300"], // Semantic: Colors / bg/unselected
       skeleton: primitive.color.gray["300"], // Semantic: Colors / bg/skeleton
-      success: primitive.color.state.success.secondary, // Semantic: Colors / bg/success
-      error: primitive.color.state.error.secondary, // Semantic: Colors / bg/error
+      success: primitive.color.state.success.primary, // Semantic: Colors / bg/success
+      successLight: primitive.color.state.success.secondary, // Semantic: Colors / bg/success-light
+      error: primitive.color.state.error.primary, // Semantic: Colors / bg/error
+      errorLight: primitive.color.state.error.secondary, // Semantic: Colors / bg/error-light
     },
     border: {
       primary: primitive.color.main.primary["1"], // Semantic: Colors / border/primary
@@ -35,6 +37,7 @@ const values = {
       placeholder: primitive.color.gray["500"], // Semantic: Colors / text/placeholder
       link: primitive.color.main.primary["1"], // Semantic: Colors / text/link
       selected: primitive.color.main.primary["1"], // Semantic: Colors / text/selected
+      error: primitive.color.state.error.primary, // Semantic: Colors / text/error
     },
     icon: {
       default: primitive.color.gray["500"], // Semantic: Colors / icon/default
