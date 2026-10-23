@@ -23,14 +23,14 @@ function listGitPaths(...args) {
   return output.split('\0').filter(Boolean);
 }
 
-function findOwnerPart(file) {
-  return PARTS.find((part) => PART_PATHS[part].some((prefix) => file.startsWith(prefix)));
+function findOwnerParts(file) {
+  return PARTS.filter((part) => PART_PATHS[part].some((prefix) => file.startsWith(prefix)));
 }
 
 function findUnownedPackages() {
   return listGitPaths('ls-files', '-z', '--', '*/package.json')
     .map(dirname)
-    .filter((packageDir) => !findOwnerPart(`${packageDir}/`));
+    .filter((packageDir) => findOwnerParts(`${packageDir}/`).length === 0);
 }
 
 function isPartFree(file) {
@@ -45,9 +45,11 @@ function planPullRequest(changedFiles) {
   const reasons = {};
 
   for (const file of changedFiles) {
-    const ownerPart = findOwnerPart(file);
-    if (ownerPart) {
-      reasons[ownerPart] ??= `${file} 변경`;
+    const ownerParts = findOwnerParts(file);
+    if (ownerParts.length > 0) {
+      for (const part of ownerParts) {
+        reasons[part] ??= `${file} 변경`;
+      }
       continue;
     }
     if (!isPartFree(file)) {
