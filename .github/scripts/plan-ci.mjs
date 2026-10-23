@@ -18,9 +18,9 @@ const PART_FREE_PATTERNS = [
 
 const PARTS = Object.keys(PART_PATHS);
 
-function git(...args) {
-  const output = execFileSync('git', args, { encoding: 'utf8' }).trim();
-  return output ? output.split('\n') : [];
+function listGitPaths(...args) {
+  const output = execFileSync('git', args, { encoding: 'utf8' });
+  return output.split('\0').filter(Boolean);
 }
 
 function findOwnerPart(file) {
@@ -28,7 +28,7 @@ function findOwnerPart(file) {
 }
 
 function findUnownedPackages() {
-  return git('ls-files', '--', '*/package.json')
+  return listGitPaths('ls-files', '-z', '--', '*/package.json')
     .map(dirname)
     .filter((packageDir) => !findOwnerPart(`${packageDir}/`));
 }
@@ -96,6 +96,6 @@ const isPullRequest = process.env.GITHUB_EVENT_NAME === 'pull_request';
 
 writeOutputs(
   isPullRequest
-    ? planPullRequest(git('diff', '--name-only', baseRef, headRef))
+    ? planPullRequest(listGitPaths('diff', '-z', '--name-only', baseRef, headRef))
     : selectAllParts(`${process.env.GITHUB_EVENT_NAME ?? 'local'} 이벤트는 전체 검사`),
 );
