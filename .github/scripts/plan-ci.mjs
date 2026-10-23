@@ -96,6 +96,6 @@ const isPullRequest = process.env.GITHUB_EVENT_NAME === 'pull_request';
 
 writeOutputs(
   isPullRequest
-    ? planPullRequest(listGitPaths('diff', '-z', '--name-only', baseRef, headRef))
+    ? planPullRequest(listGitPaths('diff', '-z', '--name-only', '--no-renames', baseRef, headRef))
     : selectAllParts(`${process.env.GITHUB_EVENT_NAME ?? 'local'} 이벤트는 전체 검사`),
 );
