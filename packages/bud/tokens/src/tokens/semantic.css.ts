@@ -219,6 +219,7 @@ const values = {
     mapblock: primitive.color.opacity["10"], // Semantic: Shadow / mapblock
     chatOut: primitive.color.opacity["10"], // Semantic: Shadow / chat-out
     chatInner: primitive.color.opacity["25"], // Semantic: Shadow / chat-inner
+    emphasis: primitive.color.opacity.primaryOpacity50, // Semantic: Shadow / emphasis
   },
 };
 

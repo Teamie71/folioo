@@ -199,6 +199,12 @@
               "type": "color",
               "isAlias": false,
               "value": "#F7F7F8"
+            },
+            {
+              "name": "opacity/primary-opacity50",
+              "type": "color",
+              "isAlias": false,
+              "value": "#5060C580"
             }
           ]
         }
@@ -1807,6 +1813,15 @@
               "value": {
                 "collection": "Primitive: Colors",
                 "name": "opacity/opacity25"
+              }
+            },
+            {
+              "name": "emphasis",
+              "type": "color",
+              "isAlias": true,
+              "value": {
+                "collection": "Primitive: Colors",
+                "name": "opacity/primary-opacity50"
               }
             }
           ]
