@@ -49,6 +49,7 @@ const values = {
       "35": "#00000059", // Primitive: Colors / opacity/opacity35
       "40": "#00000066", // Primitive: Colors / opacity/opacity40
       "45": "#00000073", // Primitive: Colors / opacity/opacity45
+      primaryOpacity50: "#5060c580", // Primitive: Colors / opacity/primary-opacity50
     },
     base: {
       white: "#ffffff", // Primitive: Colors / base/white
