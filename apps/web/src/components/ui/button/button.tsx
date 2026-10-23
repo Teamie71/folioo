@@ -4,12 +4,28 @@ import { button } from './button.css';
 
 export type ButtonProps = ComponentProps<'button'> & RecipeVariants<typeof button>;
 
-export function Button({ variant, size, className, type = 'button', ...props }: ButtonProps) {
+export function Button({
+  variant,
+  size,
+  borderWidth,
+  radius,
+  textSize,
+  fontWeight,
+  textDecoration,
+  className,
+  type = 'button',
+  ...props
+}: ButtonProps) {
   return (
     <button
       {...props}
       type={type}
-      className={[button({ variant, size }), className].filter(Boolean).join(' ')}
+      className={[
+        button({ variant, size, borderWidth, radius, textSize, textDecoration, fontWeight }),
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
     />
   );
 }

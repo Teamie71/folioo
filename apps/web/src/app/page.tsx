@@ -9,10 +9,51 @@ export default function HomePage() {
         <p>BUD 토큰 · vanilla-extract recipes · Tailwind 레이아웃</p>
       </header>
       <section aria-label="버튼 상태" className="flex flex-wrap items-center gap-4">
-        <Button>기본 버튼</Button>
-        <Button variant="secondary">보조 버튼</Button>
-        <Button size="sm">작은 버튼</Button>
-        <Button disabled>비활성 버튼</Button>
+        <Button fontWeight="bold" radius="full">
+          로그 등록하기
+        </Button>
+        <Button fontWeight="bold" radius="full">
+          포트폴리오 첨삭 받기 →
+        </Button>
+        <Button variant="secondary" borderWidth="normal" fontWeight="bold" radius="full">
+          나가기
+        </Button>
+        <Button fontWeight="bold" size="medium">
+          구매하기
+        </Button>
+        <Button variant="gradient" radius="full" fontWeight="bold">
+          무료로 시작하기 →
+        </Button>
+        <Button variant="elevate" radius="full" size="large" fontWeight="bold">
+          새로운 경험 정리 시작하기
+        </Button>
+        <Button variant="secondary" fontWeight="semibold" size="small">
+          피드백 남기기
+        </Button>
+        <Button variant="text" fontWeight="regular" textDecoration="underline">
+          피드백 남기러 가기 →
+        </Button>
+        <Button variant="neutral" size="xsmall" fontWeight="regular">
+          활동 삭제
+        </Button>
+        <Button
+          variant="secondary"
+          fontWeight="medium"
+          size="xsmall"
+          radius="full"
+          textSize="small"
+        >
+          환불 신청
+        </Button>
+        <Button disabled fontWeight="medium" size="xsmall" radius="full" textSize="small">
+          환불 신청
+        </Button>
+        <Button variant="text" fontWeight="regular">
+          삭제
+        </Button>
+        <Button size="modal" fontWeight="semibold">
+          진행
+        </Button>
       </section>
       <section aria-label="레이아웃 조합" className="space-y-3">
         <p>외부 className으로 너비와 배치를 조정합니다.</p>
