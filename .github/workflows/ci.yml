@@ -152,6 +152,10 @@ jobs:
             ${{ runner.os }}-turbo-web-
             ${{ runner.os }}-turbo-
 
+      - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @folioo/web lint
+
       - name: Check types
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm exec turbo run check-types --filter=./apps/web
