@@ -6,7 +6,7 @@ import TrashIcon from '@/assets/icons/trash.svg';
 import UploadIcon from '@/assets/icons/upload.svg';
 import PaperclipIcon from '@/assets/icons/paperclip.svg';
 import ArrowUpIcon from '@/assets/icons/arrow-up.svg';
-import ListChecktIcon from '@/assets/icons/list-check.svg';
+import ListCheckIcon from '@/assets/icons/list-check.svg';
 
 // Temporary integration fixture, not a product screen or finalized Button API.
 export default function HomePage() {
@@ -21,7 +21,7 @@ export default function HomePage() {
           로그 등록하기
         </Button>
         <Button fontWeight="bold" radius="full">
-          <PrefixIcon size={24} svg={<ListChecktIcon />} />
+          <PrefixIcon size={24} svg={<ListCheckIcon />} />
           포트폴리오 첨삭 받기 →
         </Button>
         <Button variant="secondary" borderWidth="normal" fontWeight="bold" radius="full">
@@ -78,7 +78,7 @@ export default function HomePage() {
           <Icon size={28} svg={<PaperclipIcon />} />
         </Button>
 
-        <Button layout="iconOnly" size="small" radius="full" aria-label="전송">
+        <Button layout="iconOnly" radius="full" aria-label="전송" className="size-8">
           <Icon size={20} svg={<ArrowUpIcon />} />
         </Button>
       </section>

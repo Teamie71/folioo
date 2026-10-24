@@ -16,8 +16,10 @@ export const button = recipe({
         alignItems: 'center',
         justifyContent: 'center',
         gap: vars.spacing.xs,
+        padding: vars.spacing.none,
         borderStyle: 'solid',
         borderColor: 'transparent',
+        color: vars.color.text.default,
         fontFamily: 'inherit',
         letterSpacing: vars.typography.body.body2.regular.letterSpacing,
         cursor: 'pointer',
@@ -62,11 +64,7 @@ export const button = recipe({
       gradient: {
         '@layer': {
           [componentLayer]: {
-            background: `linear-gradient(
-        180deg,
-        ${vars.color.gradient.top} 0%,
-        ${vars.color.gradient.bottom} 100%
-      )`,
+            background: `linear-gradient(180deg, ${vars.color.gradient.top} 0%, ${vars.color.gradient.bottom} 100%)`,
             color: vars.color.text.inverse,
             border: 0,
             selectors: {
@@ -83,7 +81,6 @@ export const button = recipe({
           [componentLayer]: {
             background: vars.color.bg.default,
             borderColor: vars.color.border.button,
-            color: vars.color.text.default,
             selectors: {
               '&:hover:not(:disabled)': {
                 background: vars.color.bg.hover,
@@ -97,7 +94,6 @@ export const button = recipe({
           [componentLayer]: {
             background: vars.color.bg.default,
             borderStyle: 'none',
-            color: vars.color.text.default,
             boxShadow: `0px 0px 4px 0px ${vars.shadowColor.default}`,
             selectors: {
               '&:hover:not(:disabled)': {
@@ -112,7 +108,6 @@ export const button = recipe({
           [componentLayer]: {
             background: 'transparent',
             borderStyle: 'none',
-            color: vars.color.text.default,
           },
         },
       },
@@ -184,9 +179,6 @@ export const button = recipe({
       iconOnly: {
         '@layer': {
           [componentLayer]: {
-            width: vars.spacing['2xl'],
-            height: vars.spacing['2xl'],
-            padding: vars.spacing.none,
             gap: vars.spacing.none,
             borderStyle: 'none',
             flexShrink: 0,
@@ -268,7 +260,6 @@ export const button = recipe({
   ],
   defaultVariants: {
     variant: 'primary',
-    size: 'large',
     layout: 'withText',
     borderWidth: 'normal',
     radius: 'medium',

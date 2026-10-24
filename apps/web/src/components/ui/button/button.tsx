@@ -4,7 +4,6 @@ import { button } from './button.css';
 
 type IconOnlyProps = {
   layout: 'iconOnly';
-  size: 'xsmall' | 'small';
 } & (
   | { 'aria-label': string; 'aria-labelledby'?: string }
   | { 'aria-label'?: string; 'aria-labelledby': string }
@@ -34,7 +33,7 @@ export function Button({
       className={[
         button({
           variant,
-          size,
+          size: size ?? (layout === 'iconOnly' ? undefined : 'large'),
           layout,
           borderWidth,
           radius,
