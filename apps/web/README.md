@@ -30,6 +30,36 @@ pnpm --filter @folioo/web start
   웹에서 별도의 색상·간격 계약이나 토큰 원본을 만들지 않습니다.
 - 현재 토큰은 `:root` 단일 테마입니다. 다크 모드와 폰트 파일 로딩은 이 설정에 포함하지 않습니다.
 
+## SVG import
+
+SVG는 `@svgr/webpack`으로 React 컴포넌트로 변환합니다.
+기존 vanilla-extract 플러그인과 같은 Webpack 설정에서 처리합니다.
+설정 변경 후에는 개발 서버를 재시작합니다.
+
+```tsx
+import PlusIcon from '@/assets/icons/plus.svg';
+
+<PlusIcon width={24} height={24} aria-hidden="true" focusable="false" />;
+```
+
+위 경로는 사용 예시입니다. 실제 SVG 파일은 별도로 추가합니다.
+단색 아이콘이 부모의 글자색을 따르려면 SVG의 `fill` 또는 `stroke`를
+`currentColor`로 작성합니다. SVGR는 원본 색상을 자동으로 바꾸지 않습니다.
+
+이미지로 사용할 때는 `?url`을 붙여 기존 Next.js 이미지 import를 사용합니다.
+이 경우 import 결과는 문자열 URL이 아닌 `StaticImageData`입니다.
+
+```tsx
+import Image from 'next/image';
+import logo from '@/assets/logo.svg?url';
+
+<Image src={logo} alt="Folioo" />;
+```
+
+SVG 타입은 `svgr.d.ts`에서 선언합니다. Next.js의 기본 SVG 타입보다 먼저
+적용되도록 `tsconfig.json`의 `include`에서 `next-env.d.ts` 앞에 둡니다.
+Storybook을 Vite로 구성할 때는 해당 설정에도 SVGR 변환을 별도로 연결해야 합니다.
+
 ## CSS 우선순위
 
 일반 선언은 `theme → base → components → utilities` 순서로 우선합니다.
