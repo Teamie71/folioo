@@ -2,11 +2,22 @@ import type { ComponentProps } from 'react';
 import type { RecipeVariants } from '@vanilla-extract/recipes';
 import { button } from './button.css';
 
-export type ButtonProps = ComponentProps<'button'> & RecipeVariants<typeof button>;
+type IconOnlyProps = {
+  layout: 'iconOnly';
+  size: 'xsmall' | 'small';
+} & (
+  | { 'aria-label': string; 'aria-labelledby'?: string }
+  | { 'aria-label'?: string; 'aria-labelledby': string }
+);
+
+export type ButtonProps = ComponentProps<'button'> &
+  RecipeVariants<typeof button> &
+  ({ layout?: 'withText' } | IconOnlyProps);
 
 export function Button({
   variant,
   size,
+  layout,
   borderWidth,
   radius,
   textSize,
@@ -21,7 +32,16 @@ export function Button({
       {...props}
       type={type}
       className={[
-        button({ variant, size, borderWidth, radius, textSize, textDecoration, fontWeight }),
+        button({
+          variant,
+          size,
+          layout,
+          borderWidth,
+          radius,
+          textSize,
+          textDecoration,
+          fontWeight,
+        }),
         className,
       ]
         .filter(Boolean)

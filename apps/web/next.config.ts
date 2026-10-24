@@ -21,7 +21,25 @@ const nextConfig: NextConfig = {
         issuer: imageRule.issuer,
         dependency: imageRule.dependency,
         resourceQuery: { not: [...imageRule.resourceQuery.not, /url/] },
-        use: ['@svgr/webpack'],
+        use: [
+          {
+            loader: '@svgr/webpack',
+            options: {
+              svgoConfig: {
+                plugins: [
+                  {
+                    name: 'preset-default',
+                    params: {
+                      // CSS로 SVG 크기를 바꿔도 도형이 함께 확대되도록 보존합니다.
+                      overrides: { removeViewBox: false },
+                    },
+                  },
+                  'prefixIds',
+                ],
+              },
+            },
+          },
+        ],
       },
     );
 

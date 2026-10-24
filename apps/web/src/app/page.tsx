@@ -1,4 +1,12 @@
 import { Button } from '@/components/ui/button';
+import { Icon, PrefixIcon, SuffixIcon } from '@/components/ui/icon';
+import PlusIcon from '@/assets/icons/plus.svg';
+import ChevronRightIcon from '@/assets/icons/chevron-right.svg';
+import TrashIcon from '@/assets/icons/trash.svg';
+import UploadIcon from '@/assets/icons/upload.svg';
+import PaperclipIcon from '@/assets/icons/paperclip.svg';
+import ArrowUpIcon from '@/assets/icons/arrow-up.svg';
+import ListChecktIcon from '@/assets/icons/list-check.svg';
 
 // Temporary integration fixture, not a product screen or finalized Button API.
 export default function HomePage() {
@@ -13,6 +21,7 @@ export default function HomePage() {
           로그 등록하기
         </Button>
         <Button fontWeight="bold" radius="full">
+          <PrefixIcon size={24} svg={<ListChecktIcon />} />
           포트폴리오 첨삭 받기 →
         </Button>
         <Button variant="secondary" borderWidth="normal" fontWeight="bold" radius="full">
@@ -25,6 +34,7 @@ export default function HomePage() {
           무료로 시작하기 →
         </Button>
         <Button variant="elevate" radius="full" size="large" fontWeight="bold">
+          <PrefixIcon size={16} svg={<PlusIcon />} />
           새로운 경험 정리 시작하기
         </Button>
         <Button variant="secondary" fontWeight="semibold" size="small">
@@ -34,6 +44,7 @@ export default function HomePage() {
           피드백 남기러 가기 →
         </Button>
         <Button variant="neutral" size="xsmall" fontWeight="regular">
+          <PrefixIcon size={20} svg={<TrashIcon />} />
           활동 삭제
         </Button>
         <Button
@@ -44,15 +55,31 @@ export default function HomePage() {
           textSize="small"
         >
           환불 신청
+          <SuffixIcon size={12} svg={<ChevronRightIcon />} />
         </Button>
         <Button disabled fontWeight="medium" size="xsmall" radius="full" textSize="small">
           환불 신청
+          <SuffixIcon size={12} svg={<ChevronRightIcon />} />
+        </Button>
+        <Button variant="text" fontWeight="regular" textSize="small">
+          <PrefixIcon size={24} svg={<TrashIcon />} />
+          삭제
         </Button>
         <Button variant="text" fontWeight="regular">
-          삭제
+          <PrefixIcon size={20} svg={<UploadIcon />} />
+          내보내기
         </Button>
         <Button size="modal" fontWeight="semibold">
           진행
+        </Button>
+      </section>
+      <section aria-label="아이콘 전용 버튼" className="flex items-center gap-4">
+        <Button variant="ghost" layout="iconOnly" size="xsmall" aria-label="파일 첨부">
+          <Icon size={28} svg={<PaperclipIcon />} />
+        </Button>
+
+        <Button layout="iconOnly" size="small" radius="full" aria-label="전송">
+          <Icon size={20} svg={<ArrowUpIcon />} />
         </Button>
       </section>
       <section aria-label="레이아웃 조합" className="space-y-3">

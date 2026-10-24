@@ -116,6 +116,24 @@ export const button = recipe({
           },
         },
       },
+      ghost: {
+        '@layer': {
+          [componentLayer]: {
+            background: 'transparent',
+            borderStyle: 'none',
+            color: vars.color.icon.default,
+            selectors: {
+              '&:hover:not(:disabled)': {
+                color: vars.color.icon.strong,
+              },
+              '&:disabled': {
+                background: 'transparent',
+                color: vars.color.text.unactive,
+              },
+            },
+          },
+        },
+      },
     },
     size: {
       xsmall: {
@@ -157,6 +175,21 @@ export const button = recipe({
         '@layer': {
           [componentLayer]: {
             padding: `${vars.spacing.xs} ${vars.spacing['3xl']}`,
+          },
+        },
+      },
+    },
+    layout: {
+      withText: {},
+      iconOnly: {
+        '@layer': {
+          [componentLayer]: {
+            width: vars.spacing['2xl'],
+            height: vars.spacing['2xl'],
+            padding: vars.spacing.none,
+            gap: vars.spacing.none,
+            borderStyle: 'none',
+            flexShrink: 0,
           },
         },
       },
@@ -236,6 +269,7 @@ export const button = recipe({
   defaultVariants: {
     variant: 'primary',
     size: 'large',
+    layout: 'withText',
     borderWidth: 'normal',
     radius: 'medium',
     textDecoration: 'none',
