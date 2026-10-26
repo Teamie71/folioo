@@ -21,14 +21,6 @@ const values = {
       error: primitive.color.state.error.primary, // Semantic: Colors / bg/error
       errorLight: primitive.color.state.error.secondary, // Semantic: Colors / bg/error-light
     },
-    border: {
-      primary: primitive.color.main.primary["1"], // Semantic: Colors / border/primary
-      placeholder: primitive.color.gray["500"], // Semantic: Colors / border/placeholder
-      button: primitive.color.gray["400"], // Semantic: Colors / border/button
-      divider: primitive.color.gray["300"], // Semantic: Colors / border/border-divider
-      mapline: primitive.color.gray["500"], // Semantic: Colors / border/border-mapline
-      focus: primitive.color.base.black, // Semantic: Colors / border/border-focus
-    },
     text: {
       default: primitive.color.gray["900"], // Semantic: Colors / text/default
       secondary: primitive.color.gray["600"], // Semantic: Colors / text/secondary
@@ -38,6 +30,14 @@ const values = {
       link: primitive.color.main.primary["1"], // Semantic: Colors / text/link
       selected: primitive.color.main.primary["1"], // Semantic: Colors / text/selected
       error: primitive.color.state.error.primary, // Semantic: Colors / text/error
+    },
+    border: {
+      primary: primitive.color.main.primary["1"], // Semantic: Colors / border/primary
+      placeholder: primitive.color.gray["500"], // Semantic: Colors / border/placeholder
+      button: primitive.color.gray["400"], // Semantic: Colors / border/button
+      divider: primitive.color.gray["300"], // Semantic: Colors / border/border-divider
+      mapline: primitive.color.gray["500"], // Semantic: Colors / border/border-mapline
+      focus: primitive.color.base.black, // Semantic: Colors / border/border-focus
     },
     icon: {
       default: primitive.color.gray["500"], // Semantic: Colors / icon/default
@@ -49,6 +49,10 @@ const values = {
     gradient: {
       top: primitive.color.main.secondary["3"], // Semantic: Colors / gradient/top
       bottom: primitive.color.main.primary["1"], // Semantic: Colors / gradient/bottom
+    },
+    social: {
+      kakao: primitive.color.social.kakao, // Semantic: Colors / social/kakao
+      naver: primitive.color.social.naver, // Semantic: Colors / social/naver
     },
   },
   typography: {
