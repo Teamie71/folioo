@@ -117,13 +117,13 @@
               "value": "#1A1A1A"
             },
             {
-              "name": "social/kakao",
+              "name": "social/kakao-primary",
               "type": "color",
               "isAlias": false,
               "value": "#FEE500"
             },
             {
-              "name": "social/naver",
+              "name": "social/naver-primary",
               "type": "color",
               "isAlias": false,
               "value": "#03A94D"
@@ -658,7 +658,7 @@
               "isAlias": true,
               "value": {
                 "collection": "Primitive: Colors",
-                "name": "social/kakao"
+                "name": "social/kakao-primary"
               }
             },
             {
@@ -667,7 +667,7 @@
               "isAlias": true,
               "value": {
                 "collection": "Primitive: Colors",
-                "name": "social/naver"
+                "name": "social/naver-primary"
               }
             }
           ]
