@@ -99,6 +99,9 @@ export const button = recipe({
               '&:hover:not(:disabled)': {
                 boxShadow: `0px 4px 10px 0px ${vars.shadowColor.default}`,
               },
+              '&:disabled': {
+                boxShadow: 'none',
+              },
             },
           },
         },
@@ -108,6 +111,12 @@ export const button = recipe({
           [componentLayer]: {
             background: 'transparent',
             borderStyle: 'none',
+            selectors: {
+              '&:disabled': {
+                background: 'transparent',
+                color: vars.color.bg.unactive,
+              },
+            },
           },
         },
       },
@@ -198,7 +207,6 @@ export const button = recipe({
           [componentLayer]: {
             boxSizing: 'border-box',
             gap: vars.spacing.none,
-            borderStyle: 'none',
             flexShrink: 0,
           },
         },
