@@ -129,6 +129,14 @@ export const button = recipe({
           },
         },
       },
+      social: {
+        '@layer': {
+          [componentLayer]: {
+            background: 'transparent',
+            borderStyle: 'none',
+          },
+        },
+      },
     },
     size: {
       xsmall: {
@@ -170,6 +178,15 @@ export const button = recipe({
         '@layer': {
           [componentLayer]: {
             padding: `${vars.spacing.xs} ${vars.spacing['3xl']}`,
+          },
+        },
+      },
+      fit: {
+        '@layer': {
+          [componentLayer]: {
+            padding: vars.spacing.none,
+            width: 'auto',
+            height: 'auto',
           },
         },
       },
