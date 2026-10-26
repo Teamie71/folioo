@@ -179,6 +179,7 @@ export const button = recipe({
       iconOnly: {
         '@layer': {
           [componentLayer]: {
+            boxSizing: 'border-box',
             gap: vars.spacing.none,
             borderStyle: 'none',
             flexShrink: 0,
@@ -248,6 +249,78 @@ export const button = recipe({
   },
   compoundVariants: [
     {
+      variants: { layout: 'iconOnly', size: 'xsmall' },
+      style: {
+        '@layer': {
+          [componentLayer]: {
+            width: `calc(${vars.spacing.lg} + ${vars.spacing.xs})`,
+            height: `calc(${vars.spacing.lg} + ${vars.spacing.xs})`,
+            padding: vars.spacing.none,
+          },
+        },
+      },
+    },
+    {
+      variants: { layout: 'iconOnly', size: 'small' },
+      style: {
+        '@layer': {
+          [componentLayer]: {
+            width: vars.spacing['2xl'],
+            height: vars.spacing['2xl'],
+            padding: compactPaddingY,
+          },
+        },
+      },
+    },
+    {
+      variants: { layout: 'iconOnly', size: 'medium' },
+      style: {
+        '@layer': {
+          [componentLayer]: {
+            width: vars.spacing['3xl'],
+            height: vars.spacing['3xl'],
+            padding: vars.spacing.xs,
+          },
+        },
+      },
+    },
+    {
+      variants: { layout: 'iconOnly', size: 'large' },
+      style: {
+        '@layer': {
+          [componentLayer]: {
+            width: `calc(${vars.spacing.xl} * 2)`,
+            height: `calc(${vars.spacing.xl} * 2)`,
+            padding: vars.spacing.sm,
+          },
+        },
+      },
+    },
+    {
+      variants: { layout: 'iconOnly', size: 'xlarge' },
+      style: {
+        '@layer': {
+          [componentLayer]: {
+            width: `calc(${vars.spacing['2xl']} * 2)`,
+            height: `calc(${vars.spacing['2xl']} * 2)`,
+            padding: vars.spacing.lg,
+          },
+        },
+      },
+    },
+    {
+      variants: { layout: 'iconOnly', size: 'modal' },
+      style: {
+        '@layer': {
+          [componentLayer]: {
+            width: vars.spacing['3xl'],
+            height: vars.spacing['3xl'],
+            padding: vars.spacing.xs,
+          },
+        },
+      },
+    },
+    {
       variants: { variant: 'text' },
       style: {
         '@layer': {
@@ -260,6 +333,7 @@ export const button = recipe({
   ],
   defaultVariants: {
     variant: 'primary',
+    size: 'large',
     layout: 'withText',
     borderWidth: 'normal',
     radius: 'medium',

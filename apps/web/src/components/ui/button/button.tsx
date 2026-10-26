@@ -33,7 +33,7 @@ export function Button({
       className={[
         button({
           variant,
-          size: size ?? (layout === 'iconOnly' ? undefined : 'large'),
+          size,
           layout,
           borderWidth,
           radius,

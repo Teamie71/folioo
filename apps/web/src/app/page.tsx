@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Icon, PrefixIcon, SuffixIcon } from '@/components/ui/icon';
+import { vars } from '@/styles/theme';
 import PlusIcon from '@/assets/icons/plus.svg';
 import ChevronRightIcon from '@/assets/icons/chevron-right.svg';
 import TrashIcon from '@/assets/icons/trash.svg';
@@ -34,7 +35,7 @@ export default function HomePage() {
           무료로 시작하기 →
         </Button>
         <Button variant="elevate" radius="full" size="large" fontWeight="bold">
-          <PrefixIcon size={16} svg={<PlusIcon />} />
+          <PrefixIcon size={16} color={vars.color.icon.primary} svg={<PlusIcon />} />
           새로운 경험 정리 시작하기
         </Button>
         <Button variant="secondary" fontWeight="semibold" size="small">
@@ -44,7 +45,7 @@ export default function HomePage() {
           피드백 남기러 가기 →
         </Button>
         <Button variant="neutral" size="xsmall" fontWeight="regular">
-          <PrefixIcon size={20} svg={<TrashIcon />} />
+          <PrefixIcon size={20} color={vars.color.icon.default} svg={<TrashIcon />} />
           활동 삭제
         </Button>
         <Button
@@ -62,11 +63,11 @@ export default function HomePage() {
           <SuffixIcon size={12} svg={<ChevronRightIcon />} />
         </Button>
         <Button variant="text" fontWeight="regular" textSize="small">
-          <PrefixIcon size={24} svg={<TrashIcon />} />
+          <PrefixIcon size={20} color={vars.color.icon.default} svg={<TrashIcon />} />
           삭제
         </Button>
         <Button variant="text" fontWeight="regular">
-          <PrefixIcon size={20} svg={<UploadIcon />} />
+          <PrefixIcon size={20} color={vars.color.icon.default} svg={<UploadIcon />} />
           내보내기
         </Button>
         <Button size="modal" fontWeight="semibold">
@@ -78,7 +79,7 @@ export default function HomePage() {
           <Icon size={28} svg={<PaperclipIcon />} />
         </Button>
 
-        <Button layout="iconOnly" radius="full" aria-label="전송" className="size-8">
+        <Button layout="iconOnly" size="modal" radius="full" aria-label="전송">
           <Icon size={20} svg={<ArrowUpIcon />} />
         </Button>
       </section>
