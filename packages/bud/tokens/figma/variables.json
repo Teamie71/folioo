@@ -183,6 +183,12 @@
               "value": "#00000073"
             },
             {
+              "name": "opacity/primary-opacity50",
+              "type": "color",
+              "isAlias": false,
+              "value": "#5060C580"
+            },
+            {
               "name": "base/white",
               "type": "color",
               "isAlias": false,
@@ -199,12 +205,6 @@
               "type": "color",
               "isAlias": false,
               "value": "#F7F7F8"
-            },
-            {
-              "name": "opacity/primary-opacity50",
-              "type": "color",
-              "isAlias": false,
-              "value": "#5060C580"
             }
           ]
         }
@@ -464,21 +464,21 @@
               }
             },
             {
-              "name": "border/primary",
-              "type": "color",
-              "isAlias": true,
-              "value": {
-                "collection": "Primitive: Colors",
-                "name": "main/primary/primary1"
-              }
-            },
-            {
               "name": "text/default",
               "type": "color",
               "isAlias": true,
               "value": {
                 "collection": "Primitive: Colors",
                 "name": "gray/gray900"
+              }
+            },
+            {
+              "name": "border/primary",
+              "type": "color",
+              "isAlias": true,
+              "value": {
+                "collection": "Primitive: Colors",
+                "name": "main/primary/primary1"
               }
             },
             {
@@ -650,6 +650,24 @@
               "value": {
                 "collection": "Primitive: Colors",
                 "name": "main/primary/primary1"
+              }
+            },
+            {
+              "name": "social/kakao",
+              "type": "color",
+              "isAlias": true,
+              "value": {
+                "collection": "Primitive: Colors",
+                "name": "social/kakao"
+              }
+            },
+            {
+              "name": "social/naver",
+              "type": "color",
+              "isAlias": true,
+              "value": {
+                "collection": "Primitive: Colors",
+                "name": "social/naver"
               }
             }
           ]
@@ -1041,21 +1059,21 @@
               }
             },
             {
-              "name": "body/body1/regular/size",
-              "type": "number",
-              "isAlias": true,
-              "value": {
-                "collection": "Primitive: Typography",
-                "name": "size/18"
-              }
-            },
-            {
               "name": "body/body2/semibold/weight",
               "type": "number",
               "isAlias": true,
               "value": {
                 "collection": "Primitive: Typography",
                 "name": "weight/semibold"
+              }
+            },
+            {
+              "name": "body/body1/regular/size",
+              "type": "number",
+              "isAlias": true,
+              "value": {
+                "collection": "Primitive: Typography",
+                "name": "size/18"
               }
             },
             {
