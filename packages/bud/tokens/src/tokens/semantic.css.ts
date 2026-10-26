@@ -51,8 +51,8 @@ const values = {
       bottom: primitive.color.main.primary["1"], // Semantic: Colors / gradient/bottom
     },
     social: {
-      kakao: primitive.color.social.kakao, // Semantic: Colors / social/kakao
-      naver: primitive.color.social.naver, // Semantic: Colors / social/naver
+      kakao: primitive.color.social.kakaoPrimary, // Semantic: Colors / social/kakao
+      naver: primitive.color.social.naverPrimary, // Semantic: Colors / social/naver
     },
   },
   typography: {
