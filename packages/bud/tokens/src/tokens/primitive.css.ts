@@ -36,8 +36,8 @@ const values = {
       "900": "#1a1a1a", // Primitive: Colors / gray/gray900
     },
     social: {
-      kakao: "#fee500", // Primitive: Colors / social/kakao
-      naver: "#03a94d", // Primitive: Colors / social/naver
+      kakaoPrimary: "#fee500", // Primitive: Colors / social/kakao-primary
+      naverPrimary: "#03a94d", // Primitive: Colors / social/naver-primary
     },
     opacity: {
       "5": "#0000000d", // Primitive: Colors / opacity/opacity5
