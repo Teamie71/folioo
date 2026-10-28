@@ -1,4 +1,5 @@
-import { Button, type ButtonProps } from '../button';
+import type { ComponentProps } from 'react';
+import { Button } from '../button';
 import KakaoIcon from '@/assets/icons/kakako.svg';
 import NaverIcon from '@/assets/icons/naver.svg';
 import { PrefixIcon } from '../icon';
@@ -20,7 +21,7 @@ const socialTypes = {
   },
 };
 
-export type SocialLoginButtonProps = ButtonProps & {
+export type SocialLoginButtonProps = Omit<ComponentProps<'button'>, 'children'> & {
   socialType: keyof typeof socialTypes;
 };
 
@@ -30,6 +31,7 @@ export function SocialLoginButton({ socialType, className, ...props }: SocialLog
     <Button
       {...props}
       variant="social"
+      layout="withText"
       className={[socialLoginButton({ socialType }), className].filter(Boolean).join(' ')}
     >
       <PrefixIcon size={size} color={iconColor} svg={<Logo />} />
