@@ -24,6 +24,7 @@ jobs:
     outputs:
       bud: ${{ steps.plan.outputs.bud }}
       web: ${{ steps.plan.outputs.web }}
+      ai: ${{ steps.plan.outputs.ai }}
       skipped: ${{ steps.plan.outputs.skipped }}
 
     steps:
@@ -164,10 +165,70 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm exec turbo run build --filter=./apps/web
 
+  ai:
+    name: ai
+    needs: plan
+    if: ${{ needs.plan.outputs.ai == 'true' }}
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/ai
+    env:
+      OPENROUTER_API_KEY: ci-dummy-key
+      EXPMAP_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/folioo_ai_test
+      EXPMAP_REQUIRE_DB: '1'
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: folioo_ai_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Existing AI Dockerfile uses uv 0.11.7. Keep the version aligned
+      # when the team adopts mise and pins the final Python/uv versions.
+      - name: Setup uv and Python
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.7'
+          python-version: '3.12'
+          enable-cache: true
+          cache-dependency-glob: apps/ai/uv.lock
+
+      - name: Install AI dependencies
+        id: install
+        run: uv sync --locked --dev
+
+      - name: Ruff lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run --locked ruff check --output-format=github .
+
+      - name: Ruff format
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run --locked ruff format --check .
+
+      - name: AI tests with PostgreSQL
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run --locked pytest -rs
+
   ci-ok:
     name: ci-ok
     if: ${{ !cancelled() }}
-    needs: [plan, repo, bud, web]
+    needs: [plan, repo, bud, web, ai]
     timeout-minutes: 5
     runs-on: ubuntu-latest
 

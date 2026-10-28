@@ -14,3 +14,6 @@ packages/bud/tokens/src/tokens/**
 
 # 별도 후속 작업 전까지 기존 토큰 생성 스크립트를 수정하지 않습니다.
 packages/bud/tokens/scripts/generate-tokens.mjs
+
+# AI 이관 시 기존 문서·설정 형식을 유지합니다. Python 코드는 AI Ruff로 검사합니다.
+apps/ai/**
