@@ -1,0 +1,885 @@
+"""첫 질문 스트리밍 관련 테스트"""
+
+import asyncio
+import json
+
+import pytest
+from langchain_core.messages import AIMessage, HumanMessage
+
+from app.api.v1.interview import router
+from common.sse import LangGraphEventType, SSEEventType
+from features.interview.service import InterviewService
+
+
+class DummyStateSnapshot:
+    """그래프 상태 스냅샷 더미"""
+
+    def __init__(self, values):
+        self.values = values
+
+
+class DummyChunk:
+    """스트리밍 청크 더미"""
+
+    def __init__(self, content: str):
+        self.content = content
+
+
+class DummyGraph:
+    """스트리밍 테스트용 그래프 더미"""
+
+    def __init__(self):
+        self.stream_events = []
+        self.stream_error = None
+        self.state_snapshot = None
+        self.astream_calls = []
+        self.aget_state_calls = []
+        self.update_state_calls = []
+
+    async def astream_events(self, state, config=None, version=None):
+        self.astream_calls.append({"state": state, "config": config, "version": version})
+        if self.stream_error is not None:
+            raise self.stream_error
+        for event in self.stream_events:
+            yield event
+
+    async def aget_state(self, config=None):
+        self.aget_state_calls.append(config)
+        return self.state_snapshot
+
+    async def aupdate_state(self, config, state):
+        self.update_state_calls.append({"config": config, "state": state})
+        if self.state_snapshot is None:
+            self.state_snapshot = DummyStateSnapshot(values=dict(state))
+        else:
+            self.state_snapshot.values = {**self.state_snapshot.values, **state}
+
+
+def _completed_stage_4_progress() -> dict:
+    return {
+        "fixed_q_used": 3,
+        "fixed_q_total": 3,
+        "generated_q_used": 0,
+        "generated_q_max": 0,
+        "force_all_generated_q": False,
+        "is_complete": True,
+    }
+
+
+@pytest.mark.anyio
+async def test_create_session_stream_yields_delta_and_complete(monkeypatch):
+    """첫 질문 생성 시 토큰과 완료 이벤트를 순서대로 전송하는지 테스트"""
+    dummy_graph = DummyGraph()
+    dummy_graph.stream_events = [
+        {
+            "event": LangGraphEventType.ON_CHAT_MODEL_STREAM,
+            "metadata": {"langgraph_node": "question_generator"},
+            "data": {"chunk": DummyChunk("첫 질문")},
+        }
+    ]
+    dummy_graph.state_snapshot = DummyStateSnapshot(
+        values={
+            "messages": [AIMessage(content="첫 질문")],
+            "current_stage": 1,
+            "stage_progress": {
+                "fixed_q_used": 0,
+                "fixed_q_total": 1,
+                "generated_q_used": 0,
+                "generated_q_max": 0,
+                "force_all_generated_q": False,
+                "is_complete": False,
+            },
+        }
+    )
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    service = InterviewService()
+
+    events = [
+        event
+        async for event in service.create_session_stream(
+            user_id="user-1",
+            session_id="session-1",
+            experience_name="프로젝트",
+        )
+    ]
+
+    assert events[0]["event"] == SSEEventType.CONTENT_BLOCK_DELTA
+    delta_payload = json.loads(events[0]["data"])
+    assert delta_payload["delta"]["text"] == "첫 질문"
+
+    assert events[1]["event"] == SSEEventType.MESSAGE_COMPLETE
+    complete_payload = json.loads(events[1]["data"])
+    assert complete_payload["message"]["session_id"] == "session-1"
+    assert complete_payload["message"]["first_question"] == "첫 질문"
+    assert complete_payload["message"]["status"] == "completed"
+    assert complete_payload["message"]["current_stage"] == 1
+    assert complete_payload["message"]["is_extended_mode"] is False
+    assert dummy_graph.update_state_calls[0]["state"]["status"] == "generating"
+    assert dummy_graph.update_state_calls[-1]["state"]["status"] == "completed"
+
+
+def test_create_session_stream_route_exists():
+    """첫 질문 스트리밍 라우트가 등록되어 있는지 테스트"""
+    assert any(
+        route.path == "/interview/sessions/stream" and "POST" in route.methods
+        for route in router.routes
+    )
+
+
+def test_extend_session_stream_route_exists():
+    """연장 모드 SSE 라우트가 등록되어 있는지 테스트"""
+    assert any(
+        route.path == "/interview/sessions/{session_id}/extend/stream" and "POST" in route.methods
+        for route in router.routes
+    )
+
+
+@pytest.mark.anyio
+async def test_process_message_stream_emits_retriever_events(monkeypatch):
+    """Retriever 시작/결과 이벤트를 SSE로 전송한다."""
+    dummy_graph = DummyGraph()
+    dummy_graph.state_snapshot = DummyStateSnapshot(
+        values={
+            "messages": [AIMessage(content="최종 응답")],
+            "current_stage": 1,
+            "stage_progress": {
+                "fixed_q_used": 0,
+                "fixed_q_total": 1,
+                "generated_q_used": 0,
+                "generated_q_max": 0,
+                "force_all_generated_q": False,
+                "is_complete": False,
+            },
+            "overall_completion_percentage": 25.0,
+            "all_stages_complete": False,
+        }
+    )
+    dummy_graph.stream_events = [
+        {
+            "event": LangGraphEventType.ON_CHAIN_START,
+            "metadata": {"langgraph_node": "retriever"},
+            "data": {},
+        },
+        {
+            "event": LangGraphEventType.ON_CHAIN_END,
+            "metadata": {"langgraph_node": "retriever"},
+            "data": {
+                "output": {
+                    "retrieved_insights": [
+                        {
+                            "id": "insight-1",
+                            "title": "문제 해결 경험",
+                            "activity_name": "프로젝트 A",
+                            "category": "문제해결",
+                            "similarity_score": 0.91,
+                            "source": "search",
+                        },
+                        {
+                            "id": "insight-2",
+                            "title": "멘션 인사이트",
+                            "activity_name": "프로젝트 B",
+                            "category": "기타",
+                            "similarity_score": None,
+                            "source": "mention",
+                        },
+                    ]
+                }
+            },
+        },
+        {
+            "event": LangGraphEventType.ON_CHAT_MODEL_STREAM,
+            "metadata": {"langgraph_node": "question_generator"},
+            "data": {"chunk": DummyChunk("토큰")},
+        },
+    ]
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    service = InterviewService()
+
+    events = [
+        event
+        async for event in service.process_message_stream(
+            session_id="session-1",
+            message="사용자 답변",
+        )
+    ]
+
+    assert len(events) > 0
+    assert events[0]["event"] == SSEEventType.RETRIEVER_STATUS
+    status_payload = json.loads(events[0]["data"])
+    assert status_payload["type"] == SSEEventType.RETRIEVER_STATUS
+
+    assert events[1]["event"] == SSEEventType.RETRIEVER_RESULT
+    retriever_payload = json.loads(events[1]["data"])
+    assert retriever_payload["insights"][0]["activity_name"] == "프로젝트 A"
+    assert retriever_payload["insights"][0]["source"] == "search"
+    assert retriever_payload["insights"][1]["source"] == "mention"
+
+    assert events[2]["event"] == SSEEventType.CONTENT_BLOCK_DELTA
+    complete_event = next(
+        event for event in events if event["event"] == SSEEventType.MESSAGE_COMPLETE
+    )
+    complete_payload = json.loads(complete_event["data"])
+    assert complete_payload["message"]["status"] == "completed"
+    assert "file_turn_history" not in complete_payload["message"]
+    assert dummy_graph.update_state_calls[0]["state"]["status"] == "generating"
+    assert dummy_graph.update_state_calls[-1]["state"]["status"] == "completed"
+
+
+@pytest.mark.anyio
+async def test_process_message_stream_resets_current_turn_files_when_no_files(monkeypatch):
+    """스트리밍 턴에서도 current_turn_files를 빈 리스트로 초기화한다."""
+    dummy_graph = DummyGraph()
+    dummy_graph.state_snapshot = DummyStateSnapshot(
+        values={
+            "messages": [AIMessage(content="최종 응답")],
+            "current_stage": 1,
+            "stage_progress": {
+                "fixed_q_used": 0,
+                "fixed_q_total": 1,
+                "generated_q_used": 0,
+                "generated_q_max": 0,
+                "force_all_generated_q": False,
+                "is_complete": False,
+            },
+            "overall_completion_percentage": 25.0,
+            "all_stages_complete": False,
+            "current_turn_files": ["old-file"],
+        }
+    )
+    dummy_graph.stream_events = []
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    service = InterviewService()
+
+    _ = [
+        event
+        async for event in service.process_message_stream(
+            session_id="session-1",
+            message="사용자 답변",
+        )
+    ]
+
+    assert dummy_graph.astream_calls[0]["state"]["current_turn_files"] == []
+    assert dummy_graph.astream_calls[0]["state"]["file_contexts"] == []
+
+
+@pytest.mark.anyio
+async def test_process_message_stream_accepts_file_only_request(monkeypatch):
+    """스트리밍 경로도 file-only 요청이면 빈 HumanMessage를 주입한다."""
+    dummy_graph = DummyGraph()
+    dummy_graph.state_snapshot = DummyStateSnapshot(
+        values={
+            "messages": [AIMessage(content="최종 응답")],
+            "current_stage": 1,
+            "stage_progress": {
+                "fixed_q_used": 0,
+                "fixed_q_total": 1,
+                "generated_q_used": 0,
+                "generated_q_max": 0,
+                "force_all_generated_q": False,
+                "is_complete": False,
+            },
+            "overall_completion_percentage": 25.0,
+            "all_stages_complete": False,
+        }
+    )
+    dummy_graph.stream_events = []
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    service = InterviewService()
+
+    _ = [
+        event
+        async for event in service.process_message_stream(
+            session_id="session-1",
+            message=None,
+            files=[
+                {
+                    "filename": "portfolio.pdf",
+                    "content_type": "application/pdf",
+                    "temp_path": "/tmp/portfolio.pdf",
+                }
+            ],
+        )
+    ]
+
+    invocation = dummy_graph.astream_calls[0]["state"]
+    assert invocation["messages"] == [HumanMessage(content="")]
+    assert invocation["current_turn_files"] == [
+        {
+            "filename": "portfolio.pdf",
+            "content_type": "application/pdf",
+            "temp_path": "/tmp/portfolio.pdf",
+        }
+    ]
+    assert invocation["file_contexts"] == []
+
+
+@pytest.mark.anyio
+async def test_process_message_stream_returns_none_when_all_complete(monkeypatch):
+    """모든 단계 완료 상태면 message_complete의 ai_response는 null이다."""
+    dummy_graph = DummyGraph()
+    previous_messages = [AIMessage(content="직전 질문")]
+    dummy_graph.state_snapshot = DummyStateSnapshot(
+        values={
+            "messages": [*previous_messages, HumanMessage(content="사용자 최종 답변")],
+            "current_stage": 4,
+            "stage_progress": {
+                "fixed_q_used": 3,
+                "fixed_q_total": 3,
+                "generated_q_used": 2,
+                "generated_q_max": 2,
+                "force_all_generated_q": False,
+                "is_complete": True,
+            },
+            "overall_completion_percentage": 100.0,
+            "all_stages_complete": True,
+            "is_extended_mode": False,
+            "extension_count": 1,
+        }
+    )
+    dummy_graph.stream_events = []
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    service = InterviewService()
+
+    events = [
+        event
+        async for event in service.process_message_stream(
+            session_id="session-1",
+            message="사용자 답변",
+        )
+    ]
+
+    complete_event = next(
+        event for event in events if event["event"] == SSEEventType.MESSAGE_COMPLETE
+    )
+    complete_payload = json.loads(complete_event["data"])
+    assert complete_payload["message"]["ai_response"] is None
+    assert complete_payload["message"]["status"] == "completed"
+    assert complete_payload["message"]["is_extended_mode"] is False
+
+
+@pytest.mark.anyio
+async def test_process_message_stream_auto_starts_extension_after_regular_completion(monkeypatch):
+    """완료 세션의 채팅 스트림은 별도 /extend 없이 연장 모드 상태로 실행된다."""
+    dummy_graph = DummyGraph()
+    dummy_graph.stream_events = [
+        {
+            "event": LangGraphEventType.ON_CHAT_MODEL_STREAM,
+            "metadata": {"langgraph_node": "question_generator"},
+            "data": {"chunk": DummyChunk("연장 질문")},
+        }
+    ]
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    monkeypatch.setattr(
+        "features.interview.service.get_global_config",
+        lambda: type(
+            "Config",
+            (),
+            {
+                "max_extensions": 1,
+                "extension_turns_per_session": 18,
+            },
+        )(),
+    )
+    service = InterviewService()
+
+    previous_messages = [
+        AIMessage(content="정규 마지막 질문"),
+        HumanMessage(content="정규 마지막 답변"),
+    ]
+    initial_state = {
+        "session_id": "session-1",
+        "messages": previous_messages,
+        "all_stages_complete": True,
+        "is_extended_mode": False,
+        "extension_count": 0,
+        "current_stage": 4,
+        "stage_progress": _completed_stage_4_progress(),
+    }
+    final_state = {
+        "messages": [
+            *previous_messages,
+            HumanMessage(content="추가로 정리하고 싶은 내용입니다."),
+            AIMessage(content="연장 질문"),
+        ],
+        "current_stage": 4,
+        "stage_progress": {
+            "fixed_q_used": 3,
+            "fixed_q_total": 3,
+            "generated_q_used": 2,
+            "generated_q_max": 2,
+            "force_all_generated_q": False,
+            "is_complete": True,
+        },
+        "overall_completion_percentage": 100.0,
+        "all_stages_complete": False,
+        "is_extended_mode": True,
+        "extension_count": 1,
+        "extension_turns_used": 1,
+        "extension_turns_max": 18,
+    }
+    states = [initial_state, final_state]
+
+    async def _get_session_state(_session_id: str):
+        if states:
+            return states.pop(0)
+        return final_state
+
+    monkeypatch.setattr(service, "get_session_state", _get_session_state)
+
+    events = [
+        event
+        async for event in service.process_message_stream(
+            session_id="session-1",
+            message="추가로 정리하고 싶은 내용입니다.",
+        )
+    ]
+
+    invocation = dummy_graph.astream_calls[0]["state"]
+    assert invocation["is_extended_mode"] is True
+    assert invocation["all_stages_complete"] is False
+    assert invocation["extension_count"] == 1
+    assert invocation["extension_turns_used"] == 0
+    assert invocation["extension_turns_max"] == 18
+    assert invocation["messages"] == [HumanMessage(content="추가로 정리하고 싶은 내용입니다.")]
+
+    complete_event = next(
+        event for event in events if event["event"] == SSEEventType.MESSAGE_COMPLETE
+    )
+    complete_payload = json.loads(complete_event["data"])
+    assert complete_payload["message"]["ai_response"] == "연장 질문"
+    assert complete_payload["message"]["all_complete"] is False
+    assert complete_payload["message"]["is_extended_mode"] is True
+    assert complete_payload["message"]["extension_turns_used"] == 1
+    assert complete_payload["message"]["extension_turns_max"] == 18
+
+
+@pytest.mark.anyio
+async def test_process_message_stream_no_auto_extension_before_stage_4(monkeypatch):
+    """완료 플래그가 잘못 켜져도 4단계 완료 전이면 채팅 스트림을 자동 연장하지 않는다."""
+    dummy_graph = DummyGraph()
+    dummy_graph.stream_events = [
+        {
+            "event": LangGraphEventType.ON_CHAT_MODEL_STREAM,
+            "metadata": {"langgraph_node": "question_generator"},
+            "data": {"chunk": DummyChunk("4단계 첫 질문")},
+        }
+    ]
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    monkeypatch.setattr(
+        "features.interview.service.get_global_config",
+        lambda: type(
+            "Config",
+            (),
+            {
+                "max_extensions": 1,
+                "extension_turns_per_session": 18,
+            },
+        )(),
+    )
+    service = InterviewService()
+
+    previous_messages = [AIMessage(content="3단계 마지막 질문")]
+    initial_state = {
+        "session_id": "session-1",
+        "messages": previous_messages,
+        "all_stages_complete": True,
+        "is_extended_mode": False,
+        "extension_count": 0,
+        "current_stage": 3,
+        "stage_progress": {
+            "fixed_q_used": 3,
+            "fixed_q_total": 3,
+            "generated_q_used": 0,
+            "generated_q_max": 0,
+            "force_all_generated_q": False,
+            "is_complete": True,
+        },
+    }
+    final_state = {
+        "messages": [
+            *previous_messages,
+            HumanMessage(content="3단계 마지막 답변"),
+            AIMessage(content="4단계 첫 질문"),
+        ],
+        "current_stage": 4,
+        "stage_progress": {
+            "fixed_q_used": 1,
+            "fixed_q_total": 3,
+            "generated_q_used": 0,
+            "generated_q_max": 0,
+            "force_all_generated_q": False,
+            "is_complete": False,
+        },
+        "overall_completion_percentage": 0.0,
+        "all_stages_complete": False,
+        "is_extended_mode": False,
+        "extension_turns_used": 0,
+        "extension_turns_max": 18,
+    }
+    states = [initial_state, final_state]
+
+    async def _get_session_state(_session_id: str):
+        if states:
+            return states.pop(0)
+        return final_state
+
+    monkeypatch.setattr(service, "get_session_state", _get_session_state)
+
+    events = [
+        event
+        async for event in service.process_message_stream(
+            session_id="session-1",
+            message="3단계 마지막 답변",
+        )
+    ]
+
+    invocation = dummy_graph.astream_calls[0]["state"]
+    assert "is_extended_mode" not in invocation
+    assert "extension_count" not in invocation
+
+    complete_event = next(
+        event for event in events if event["event"] == SSEEventType.MESSAGE_COMPLETE
+    )
+    complete_payload = json.loads(complete_event["data"])
+    assert complete_payload["message"]["ai_response"] == "4단계 첫 질문"
+    assert complete_payload["message"]["current_stage"] == 4
+    assert complete_payload["message"]["is_extended_mode"] is False
+
+
+@pytest.mark.anyio
+async def test_extend_session_stream_yields_delta_and_complete(monkeypatch):
+    """연장 시작 스트림에서 토큰과 완료 이벤트를 순서대로 전송한다."""
+    dummy_graph = DummyGraph()
+    dummy_graph.stream_events = [
+        {
+            "event": LangGraphEventType.ON_CHAT_MODEL_STREAM,
+            "metadata": {"langgraph_node": "question_generator"},
+            "data": {"chunk": DummyChunk("연장 질문")},
+        }
+    ]
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    monkeypatch.setattr(
+        "features.interview.service.get_global_config",
+        lambda: type(
+            "Config",
+            (),
+            {
+                "max_extensions": 1,
+                "extension_turns_per_session": 18,
+            },
+        )(),
+    )
+    service = InterviewService()
+
+    initial_state = {
+        "session_id": "session-1",
+        "all_stages_complete": True,
+        "current_stage": 4,
+        "stage_progress": _completed_stage_4_progress(),
+        "extension_count": 0,
+    }
+    final_state = {
+        "messages": [AIMessage(content="연장 질문")],
+        "current_stage": 4,
+        "stage_progress": {
+            "fixed_q_used": 3,
+            "fixed_q_total": 3,
+            "generated_q_used": 2,
+            "generated_q_max": 2,
+            "force_all_generated_q": False,
+            "is_complete": True,
+        },
+        "overall_completion_percentage": 100.0,
+        "all_stages_complete": False,
+        "is_extended_mode": True,
+        "extension_turns_used": 1,
+        "extension_turns_max": 18,
+        "extension_count": 1,
+    }
+    states = [initial_state, final_state]
+
+    async def _get_session_state(_session_id: str):
+        if states:
+            return states.pop(0)
+        return final_state
+
+    monkeypatch.setattr(service, "get_session_state", _get_session_state)
+
+    events = [event async for event in service.extend_session_stream(session_id="session-1")]
+
+    assert dummy_graph.astream_calls[0]["state"]["mentioned_insight"] is None
+    assert dummy_graph.astream_calls[0]["state"]["additional_question_target_statuses"] == {}
+    assert dummy_graph.astream_calls[0]["state"]["additional_question_pre_evaluated"] is False
+    assert dummy_graph.astream_calls[0]["state"]["current_additional_question_target_id"] is None
+    assert dummy_graph.astream_calls[0]["state"]["current_turn_files"] == []
+    assert dummy_graph.astream_calls[0]["state"]["file_contexts"] == []
+
+    assert events[0]["event"] == SSEEventType.CONTENT_BLOCK_DELTA
+    delta_payload = json.loads(events[0]["data"])
+    assert delta_payload["delta"]["text"] == "연장 질문"
+
+    complete_event = next(
+        event for event in events if event["event"] == SSEEventType.MESSAGE_COMPLETE
+    )
+    complete_payload = json.loads(complete_event["data"])
+    assert complete_payload["message"]["ai_response"] == "연장 질문"
+    assert complete_payload["message"]["status"] == "completed"
+    assert complete_payload["message"]["is_extended_mode"] is True
+    assert dummy_graph.update_state_calls[0]["state"]["status"] == "generating"
+    assert dummy_graph.update_state_calls[-1]["state"]["status"] == "completed"
+
+
+@pytest.mark.anyio
+async def test_extend_session_stream_uses_new_ai_response_when_no_tokens(monkeypatch):
+    """연장 시작 스트림 토큰이 없으면 최종 상태의 새 AI 메시지만 응답으로 사용한다."""
+    dummy_graph = DummyGraph()
+    dummy_graph.stream_events = []
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    monkeypatch.setattr(
+        "features.interview.service.get_global_config",
+        lambda: type(
+            "Config",
+            (),
+            {
+                "max_extensions": 1,
+                "extension_turns_per_session": 18,
+            },
+        )(),
+    )
+    service = InterviewService()
+
+    previous_messages = [AIMessage(content="정규 마지막 질문")]
+    initial_state = {
+        "session_id": "session-1",
+        "messages": previous_messages,
+        "all_stages_complete": True,
+        "current_stage": 4,
+        "stage_progress": _completed_stage_4_progress(),
+        "extension_count": 0,
+    }
+    final_state = {
+        "messages": [*previous_messages, AIMessage(content="연장 질문")],
+        "current_stage": 4,
+        "stage_progress": {
+            "fixed_q_used": 3,
+            "fixed_q_total": 3,
+            "generated_q_used": 2,
+            "generated_q_max": 2,
+            "force_all_generated_q": False,
+            "is_complete": True,
+        },
+        "overall_completion_percentage": 100.0,
+        "all_stages_complete": False,
+        "is_extended_mode": True,
+        "extension_turns_used": 1,
+        "extension_turns_max": 18,
+        "extension_count": 1,
+    }
+    states = [initial_state, final_state]
+
+    async def _get_session_state(_session_id: str):
+        if states:
+            return states.pop(0)
+        return final_state
+
+    monkeypatch.setattr(service, "get_session_state", _get_session_state)
+
+    events = [event async for event in service.extend_session_stream(session_id="session-1")]
+
+    complete_event = next(
+        event for event in events if event["event"] == SSEEventType.MESSAGE_COMPLETE
+    )
+    complete_payload = json.loads(complete_event["data"])
+    assert complete_payload["message"]["ai_response"] == "연장 질문"
+
+
+@pytest.mark.anyio
+async def test_process_message_stream_sets_failed_status_on_exception(monkeypatch):
+    """스트리밍 예외 발생 시 세션 status를 failed로 기록한다."""
+    dummy_graph = DummyGraph()
+    dummy_graph.state_snapshot = DummyStateSnapshot(
+        values={
+            "session_id": "session-1",
+            "current_stage": 1,
+            "stage_progress": {
+                "fixed_q_used": 0,
+                "fixed_q_total": 1,
+                "generated_q_used": 0,
+                "generated_q_max": 0,
+                "force_all_generated_q": False,
+                "is_complete": False,
+            },
+            "overall_completion_percentage": 25.0,
+            "all_stages_complete": False,
+        }
+    )
+    dummy_graph.stream_error = RuntimeError("boom")
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    service = InterviewService()
+
+    events = [
+        event
+        async for event in service.process_message_stream(
+            session_id="session-1",
+            message="사용자 답변",
+        )
+    ]
+
+    assert events[0]["event"] == SSEEventType.ERROR
+    error_payload = json.loads(events[0]["data"])
+    assert error_payload["error"]["code"] == "llm_error"
+    assert dummy_graph.update_state_calls[0]["state"]["status"] == "generating"
+    assert dummy_graph.update_state_calls[-1]["state"]["status"] == "failed"
+
+
+@pytest.mark.anyio
+async def test_create_session_stream_sets_failed_status_on_cancellation(monkeypatch):
+    """세션 생성 스트림 취소 시 failed를 기록하고 취소를 다시 전파한다."""
+    dummy_graph = DummyGraph()
+    dummy_graph.stream_error = asyncio.CancelledError()
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    service = InterviewService()
+
+    with pytest.raises(asyncio.CancelledError):
+        _ = [
+            event
+            async for event in service.create_session_stream(
+                user_id="user-1",
+                session_id="session-1",
+                experience_name="프로젝트",
+            )
+        ]
+
+    assert dummy_graph.update_state_calls[0]["state"]["status"] == "generating"
+    assert dummy_graph.update_state_calls[0]["state"]["user_id"] == "user-1"
+    assert dummy_graph.update_state_calls[0]["state"]["session_id"] == "session-1"
+    assert dummy_graph.update_state_calls[0]["state"]["experience_name"] == "프로젝트"
+    assert dummy_graph.update_state_calls[-1]["state"]["status"] == "failed"
+
+
+@pytest.mark.anyio
+async def test_extend_session_stream_sets_failed_status_on_cancellation(monkeypatch):
+    """연장 스트림 취소 시 failed를 기록하고 취소를 다시 전파한다."""
+    dummy_graph = DummyGraph()
+    dummy_graph.stream_error = asyncio.CancelledError()
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    monkeypatch.setattr(
+        "features.interview.service.get_global_config",
+        lambda: type(
+            "Config",
+            (),
+            {
+                "max_extensions": 1,
+                "extension_turns_per_session": 18,
+            },
+        )(),
+    )
+    service = InterviewService()
+
+    initial_state = {
+        "session_id": "session-1",
+        "all_stages_complete": True,
+        "current_stage": 4,
+        "stage_progress": _completed_stage_4_progress(),
+        "extension_count": 0,
+    }
+
+    async def _get_session_state(_session_id: str):
+        return initial_state
+
+    monkeypatch.setattr(service, "get_session_state", _get_session_state)
+
+    with pytest.raises(asyncio.CancelledError):
+        _ = [event async for event in service.extend_session_stream(session_id="session-1")]
+
+    assert dummy_graph.update_state_calls[0]["state"]["status"] == "generating"
+    assert dummy_graph.update_state_calls[-1]["state"]["status"] == "failed"
+
+
+@pytest.mark.anyio
+async def test_process_message_stream_sets_failed_status_on_cancellation(monkeypatch):
+    """메시지 스트림 취소 시 failed를 기록하고 취소를 다시 전파한다."""
+    dummy_graph = DummyGraph()
+    dummy_graph.state_snapshot = DummyStateSnapshot(
+        values={
+            "session_id": "session-1",
+            "current_stage": 1,
+            "stage_progress": {
+                "fixed_q_used": 0,
+                "fixed_q_total": 1,
+                "generated_q_used": 0,
+                "generated_q_max": 0,
+                "force_all_generated_q": False,
+                "is_complete": False,
+            },
+            "overall_completion_percentage": 25.0,
+            "all_stages_complete": False,
+        }
+    )
+    dummy_graph.stream_error = asyncio.CancelledError()
+
+    monkeypatch.setattr(
+        "features.interview.service.build_graph", lambda checkpointer=None: dummy_graph
+    )
+    monkeypatch.setattr("features.interview.service.get_checkpointer", lambda: object())
+    service = InterviewService()
+
+    with pytest.raises(asyncio.CancelledError):
+        _ = [
+            event
+            async for event in service.process_message_stream(
+                session_id="session-1",
+                message="사용자 답변",
+            )
+        ]
+
+    assert dummy_graph.update_state_calls[0]["state"]["status"] == "generating"
+    assert dummy_graph.update_state_calls[-1]["state"]["status"] == "failed"

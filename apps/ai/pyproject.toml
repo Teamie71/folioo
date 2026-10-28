@@ -1,0 +1,102 @@
+[project]
+name = "folioo-ai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.31.0",
+    "defusedxml>=0.7.1",
+    "fastapi>=0.128.0",
+    "httpx>=0.28.1",
+    "langchain>=1.2.3",
+    "langchain-openai>=1.1.7",
+    "langgraph>=1.0.5",
+    "langgraph-checkpoint>=3.0",
+    "langgraph-checkpoint-postgres>=3.0.4",
+    "langgraph-cli[inmem]>=0.4.11",
+    "psycopg[binary]>=3.2.10",
+    "psycopg-pool>=3.2.6",
+    "pydantic-settings>=2.12.0",
+    "python-multipart>=0.0.20",
+    "python-dotenv>=1.2.1",
+    "pyyaml>=6.0.3",
+    "sse-starlette>=2.1.3",
+    "tavily-python>=0.7.22",
+    "uvicorn[standard]>=0.40.0",
+    "google-cloud-storage>=3.10.1",
+    # Anthropic PPTX skill validate.py imports lxml.etree at runtime.
+    "lxml>=6.0.0",
+    "pyjwt>=2.10.0",
+    "markitdown[docx,pptx]>=0.1.3",
+    "pypdfium2>=5.13.0",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.14.11",
+]
+template-tools = [
+    "markitdown[pptx]>=0.1.3",
+    "pillow>=11.0.0",
+]
+pptx-worker = [
+    "defusedxml>=0.7.1",
+    "fastapi>=0.128.0",
+    "google-cloud-storage>=3.10.1",
+    "google-cloud-tasks>=2.18.0",
+    "httpx>=0.28.1",
+    "langchain-core>=1.2.3",
+    "langchain-openai>=1.1.7",
+    "lxml>=6.0.0",
+    "markitdown[pptx]>=0.1.3",
+    "pillow>=11.0.0",
+    "python-dotenv>=1.2.1",
+    "uvicorn[standard]>=0.40.0",
+]
+local-db = [
+    "pgserver>=0.1.4",
+]
+
+[tool.pytest.ini_options]
+# --strict-markers: 오타난 마커를 조용히 무시하지 않고 오류로 만든다.
+# --strict-config:  ini 설정 오타도 마찬가지.
+addopts = "--import-mode=importlib --strict-markers --strict-config"
+pythonpath = [".", "apps/pptx-worker"]
+testpaths = ["tests"] # 테스트 탐색 디렉토리
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "*.egg-info",
+    "migrations/",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "features", "common"]
