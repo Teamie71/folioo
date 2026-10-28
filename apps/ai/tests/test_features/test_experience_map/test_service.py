@@ -246,7 +246,7 @@ async def test_lease_loss_interrupts_during_silence(repo, user_id):
 
 
 @pytest.mark.asyncio
-async def test_turn_keeps_running_after_client_disconnects(repo, user_id):
+async def test_turn_keeps_running_after_client_disconnects(repo, user_id, monkeypatch):
     """SSE 연결이 끊겨도(새로고침·탭 닫기) 턴은 끝까지 돌아 완료로 저장된다.
 
     실행이 SSE generator 안에서 돌면 연결이 끊길 때 generator 가 닫히면서
@@ -254,6 +254,14 @@ async def test_turn_keeps_running_after_client_disconnects(repo, user_id):
     한 번에 중단됐다.
     """
     service = ExperienceMapService(repository=repo, runner=_SlowRunner(gap_seconds=0.3))
+    execution_finished = asyncio.Event()
+    execute_into = service._execute_into
+
+    async def tracked_execute_into(prepared, queue):
+        await execute_into(prepared, queue)
+        execution_finished.set()
+
+    monkeypatch.setattr(service, "_execute_into", tracked_execute_into)
     session = await repo.get_or_create_session(user_id, "200")
     request_id = new_request_id()
     prepared = await service.prepare_chat(
@@ -280,6 +288,9 @@ async def test_turn_keeps_running_after_client_disconnects(repo, user_id):
         return status
 
     assert await asyncio.wait_for(wait_until_finished(), timeout=4) == "completed"
+    # 요청 상태 갱신 뒤에도 메시지 저장이 남아 있다. DB 정리와 경합하지 않도록
+    # SSE 연결과 분리된 실행이 실제로 끝날 때까지 기다린다.
+    await asyncio.wait_for(execution_finished.wait(), timeout=4)
 
 
 @pytest.mark.asyncio
