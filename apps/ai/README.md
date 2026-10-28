@@ -63,8 +63,8 @@ AI 서버는 `ai:dev`로 따로 실행합니다. 공통 `pnpm dev`에는 포함�
 | `pnpm run ai:format` | 포맷 수정 |
 | `pnpm run ai:test` | 전체 AI 테스트 |
 | `pnpm run ai:check` | AI 린트·포맷·테스트 |
-| `pnpm check` | 공통 검사와 AI 린트·포맷 |
-| `pnpm run check:all` | 공통 검사와 AI 전체 테스트 |
+| `pnpm check` | 기존 공통 포맷·린트·타입·빌드 검사 |
+| `pnpm run check:all` | 공통 검사와 AI 린트·포맷·전체 테스트 |
 
 테스트에는 서버용 DB와 분리한 `folioo_ai_test`를 먼저 생성합니다.
 
@@ -72,7 +72,7 @@ AI 서버는 `ai:dev`로 따로 실행합니다. 공통 `pnpm dev`에는 포함�
 EXPMAP_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55432/folioo_ai_test OPENROUTER_API_KEY=ci-dummy-key pnpm run ai:check
 ```
 
-`ai:test`는 DB 연결이 없으면 실패합니다. `pnpm check`에는 테스트 DB가 필요 없습니다.
+`ai:test`는 DB 연결이 없으면 실패합니다. 기존 `pnpm check`에는 AI 도구와 테스트 DB가 필요 없습니다.
 AI 검사는 캐시 없이 실행하고, CI도 같은 `ai:*` 명령을 사용합니다.
 위 명령은 macOS·Linux 셸 기준이며 Windows에서는 WSL을 사용합니다.
 
