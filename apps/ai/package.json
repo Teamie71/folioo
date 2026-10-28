@@ -1,0 +1,13 @@
+{
+  "name": "@folioo/ai",
+  "private": true,
+  "scripts": {
+    "setup": "uv sync --locked --dev",
+    "setup:local": "uv sync --locked --dev --group local-db",
+    "dev": "uv run --locked --group local-db python main.py",
+    "lint": "uv run --locked ruff check .",
+    "format": "uv run --locked ruff format .",
+    "format:check": "uv run --locked ruff format --check .",
+    "test": "uv run --locked pytest -rs"
+  }
+}
