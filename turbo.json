@@ -13,6 +13,33 @@
       "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
+    },
+    "@folioo/ai#lint": {
+      "cache": false,
+      "outputs": [],
+      "passThroughEnv": ["UV_CACHE_DIR", "UV_OFFLINE", "UV_PYTHON"]
+    },
+    "@folioo/ai#format:check": {
+      "cache": false,
+      "outputs": [],
+      "passThroughEnv": ["UV_CACHE_DIR", "UV_OFFLINE", "UV_PYTHON"]
+    },
+    "@folioo/ai#test": {
+      "cache": false,
+      "outputs": [],
+      "passThroughEnv": [
+        "EXPMAP_TEST_DATABASE_URL",
+        "EXPMAP_REQUIRE_DB",
+        "OPENROUTER_API_KEY",
+        "UV_CACHE_DIR",
+        "UV_OFFLINE",
+        "UV_PYTHON"
+      ]
+    },
+    "@folioo/ai#dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": ["*"]
     }
   }
 }
