@@ -1,0 +1,36 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+.env
+
+# 로컬 개발용 PostgreSQL 클러스터와 진행 상황 스냅샷
+# (진행 상황은 레포가 아니라 GitHub 이슈로 추적한다)
+.local/
+.langgraph_api/
+.pytest_cache/
+.ruff_cache/
+
+PROJECT_INFO.md
+opencode.json
+.for_local/
+.agent/
+
+# Checkpointer 데이터 (SQLite)
+.data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+.omx/
+.claude/
+
+# 로컬 이관 작업 계획
+/docs/local-migration/
