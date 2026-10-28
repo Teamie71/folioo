@@ -13,7 +13,7 @@
     "check:all": "pnpm run check && pnpm run ai:test",
     "ai:setup": "pnpm --filter @folioo/ai run setup",
     "ai:setup:local": "pnpm --filter @folioo/ai run setup:local",
-    "ai:dev": "pnpm --filter @folioo/ai run dev",
+    "ai:dev": "pnpm --filter @folioo/ai run serve",
     "ai:lint": "turbo run lint --filter=@folioo/ai",
     "ai:format": "pnpm --filter @folioo/ai run format",
     "ai:format:check": "turbo run format:check --filter=@folioo/ai",
