@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from pptx_worker.metrics import WORKER_TMP_ROOT
 
 from features.visualization.storage.gcs_client import (
     GcsClient,
@@ -405,7 +406,7 @@ class TestJobWorkdir:
 
     def test_workdir_under_tmp(self):
         with job_workdir("test-job") as workdir:
-            assert str(workdir).startswith("/tmp")
+            assert workdir.parent.resolve() == WORKER_TMP_ROOT.resolve()
 
     def test_files_inside_are_removed(self):
         with job_workdir("test-job") as workdir:
