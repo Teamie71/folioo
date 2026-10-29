@@ -25,7 +25,6 @@ COPY app/ ./app/
 COPY common/ ./common/
 COPY features/correction/ ./features/correction/
 COPY features/experience_map/ ./features/experience_map/
-COPY features/interview/ ./features/interview/
 COPY features/portfolio/ ./features/portfolio/
 COPY main.py ./
 

@@ -1,4 +1,7 @@
-# FOLIOO AI - SSE 스트리밍 프로토콜
+# FOLIOO AI - 기존 인터뷰 SSE 스트리밍 프로토콜
+
+> 구형 인터뷰 API 제거 전의 프로토콜 기록입니다. 아래 인터뷰 경로는 더 이상 제공하지 않습니다.
+> 현재 경험맵 SSE 계약은 [경험맵 API 명세](experience-map-api-spec.md)를 참고하세요.
 
 ## 개요
 

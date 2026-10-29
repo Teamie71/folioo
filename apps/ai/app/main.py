@@ -143,7 +143,7 @@ async def lifespan(app: FastAPI):
     """
     애플리케이션 생명주기 관리
 
-    - 시작 시: 리소스 초기화 (경험 맵 DB 풀, Checkpointer, InsightStore, httpx 클라이언트)
+    - 시작 시: 리소스 초기화 (경험 맵 DB 풀, Checkpointer, httpx 클라이언트)
     - 종료 시: 리소스 정리
     """
 
@@ -163,8 +163,6 @@ async def lifespan(app: FastAPI):
         init_repository as init_experience_map_repository,
     )
     from features.experience_map.repository import set_repository as set_experience_map_repository
-    from features.interview.agents.insight_store import MainServerInsightStore
-    from features.interview.agents.nodes.retriever import init_insight_store
 
     logger = logging.getLogger(__name__)
 
@@ -211,10 +209,6 @@ async def lifespan(app: FastAPI):
         logger.warning("DATABASE_URL이 설정되지 않음 - 경험 맵 DB 비활성화")
     except Exception:
         logger.exception("경험 맵 DB 커넥션 풀 초기화 실패")
-
-    # ===== InsightStore 초기화 (메인 서버 API) =====
-    init_insight_store(MainServerInsightStore())
-    logger.info("InsightStore(MainServer) 초기화 완료")
 
     try:
         get_http_client()
@@ -296,7 +290,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="Folioo AI",
-        description="포트폴리오 정리를 도와주는 AI 인터뷰 에이전트 API",
+        description="경험맵 정리와 포트폴리오 첨삭·PDF 추출 API",
         version=APP_VERSION,
         lifespan=lifespan,
     )

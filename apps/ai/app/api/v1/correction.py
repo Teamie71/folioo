@@ -7,6 +7,7 @@ from contextlib import suppress
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Response, UploadFile, status
 from sse_starlette.sse import EventSourceResponse
 
+from app.schemas.common import ErrorResponse
 from app.schemas.correction import (
     CompanyInsightResponse,
     CorrectionResultResponse,
@@ -14,7 +15,6 @@ from app.schemas.correction import (
     UpdateCompanyInsightRequest,
     UpdateEmphasisPointsRequest,
 )
-from app.schemas.interview import ErrorResponse
 from app.schemas.pdf_extraction import PdfExtractionAcceptedResponse
 from common.clients.base_client import MainServerError
 from common.clients.correction_client import get_correction_client

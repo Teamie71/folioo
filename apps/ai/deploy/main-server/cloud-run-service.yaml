@@ -35,10 +35,6 @@ spec:
                         value: "${MAIN_BACKEND_URL}"
                       - name: ALLOWED_ORIGINS
                         value: "${ALLOWED_ORIGINS}"
-                      - name: INSIGHT_SEARCH_TOP_K
-                        value: "${INSIGHT_SEARCH_TOP_K}"
-                      - name: INSIGHT_SEARCH_THRESHOLD
-                        value: "${INSIGHT_SEARCH_THRESHOLD}"
                       - name: DATABASE_URL
                         valueFrom:
                             secretKeyRef:

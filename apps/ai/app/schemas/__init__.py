@@ -1,5 +1,6 @@
 """API 스키마 패키지"""
 
+from .common import ErrorResponse
 from .correction import (
     CompanyInsightResponse,
     CorrectionResultResponse,
@@ -9,31 +10,9 @@ from .correction import (
     UpdateCompanyInsightRequest,
     UpdateEmphasisPointsRequest,
 )
-from .interview import (
-    ChatResponse,
-    CreateSessionRequest,
-    CreateSessionResponse,
-    ErrorResponse,
-    ExtendSessionResponse,
-    SessionStateResponse,
-    StageProgressSchema,
-)
 from .pdf_extraction import PdfExtractionAcceptedResponse
-from .portfolio import (
-    GeneratePortfolioRequest,
-    GeneratePortfolioResponse,
-    PortfolioResultResponse,
-    PortfolioStatusResponse,
-    UpdateContributionRateRequest,
-)
 
 __all__ = [
-    "CreateSessionRequest",
-    "CreateSessionResponse",
-    "ChatResponse",
-    "ExtendSessionResponse",
-    "SessionStateResponse",
-    "StageProgressSchema",
     "ErrorResponse",
     "CreateCorrectionRequest",
     "CreateCorrectionResponse",
@@ -42,10 +21,5 @@ __all__ = [
     "UpdateCompanyInsightRequest",
     "UpdateEmphasisPointsRequest",
     "CompanyInsightResponse",
-    "GeneratePortfolioRequest",
-    "GeneratePortfolioResponse",
-    "PortfolioResultResponse",
-    "PortfolioStatusResponse",
-    "UpdateContributionRateRequest",
     "PdfExtractionAcceptedResponse",
 ]

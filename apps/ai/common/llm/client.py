@@ -64,22 +64,6 @@ def get_llm(
 
 
 @lru_cache(maxsize=8)
-def get_analyst_llm(
-    model: str | None = None,
-    temperature: float = 0.3,
-) -> ChatOpenAI:
-    """Analyst 노드 전용 LLM 클라이언트 반환"""
-
-    return _build_llm(
-        model=model,
-        temperature=temperature,
-        timeout=120,
-        disable_streaming=True,
-        max_retries=0,
-    )
-
-
-@lru_cache(maxsize=8)
 def get_experience_map_llm(
     model: str | None = None,
     temperature: float = 0.0,

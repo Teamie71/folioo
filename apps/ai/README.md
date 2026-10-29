@@ -1,15 +1,15 @@
 # Folioo AI
 
-Folioo AI는 사용자의 프로젝트 경험을 인터뷰로 구조화하고, 포트폴리오 문장 생성과 첨삭 보조를 제공하는 AI 백엔드입니다. FastAPI API 서버와 LangGraph 기반 인터뷰 에이전트를 중심으로 동작하며, 메인 NestJS 백엔드와 연동됩니다.
+Folioo AI는 대화와 파일 입력으로 경험맵을 정리하고, 포트폴리오 첨삭·RAG·PDF 추출을 제공하는 AI 백엔드입니다. FastAPI와 LangGraph를 사용하며 메인 NestJS 백엔드와 연동됩니다.
 
 ## 주요 기능
 
-- 인터뷰 세션 생성, 상태 조회, 단계별 대화 진행
-- SSE 기반 AI 응답 토큰 스트리밍
-- PDF/이미지 업로드를 포함한 인터뷰 답변 처리
-- 인터뷰 완료 후 포트폴리오 결과 생성
-- 자기소개서/포트폴리오 첨삭 RAG 및 기업 분석 보조
-- PostgreSQL checkpointer 기반 LangGraph 세션 상태 저장
+- 경험맵 세션 생성·대화·메시지·상태 조회·취소·재시도
+- SSE 기반 경험맵 처리 결과 전달
+- PDF·이미지·DOCX·PPTX 입력 처리
+- 카카오 대화와 경험맵 연동
+- 포트폴리오 첨삭·RAG·PDF 추출
+- PostgreSQL checkpointer 기반 LangGraph 상태 저장
 
 ## 기술 스택
 
@@ -113,5 +113,5 @@ LangGraph Studio는 `apps/ai`에서 `uv run --locked langgraph dev`로 실행합
 
 ## 아키텍처 문서
 
-- `docs/architecture/sse-streaming.md`: 인터뷰 SSE 스트리밍 이벤트 프로토콜
+- `docs/architecture/experience-map-api-spec.md`: 경험맵 API·SSE 계약
 - `docs/adr/`: 주요 아키텍처 의사결정 기록

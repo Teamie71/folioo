@@ -23,11 +23,9 @@ folioo-ai/
 │   ├── utils/              # 공통 유틸리티
 │   └── vector_store/       # 벡터 스토어
 ├── features/               # 기능별 모듈
-│   └── interview/          # 인터뷰 에이전트
-│       ├── agents/         # LangGraph 에이전트
-│       │   ├── nodes/      # 에이전트 노드
-│       │   └── prompts/    # 프롬프트 템플릿
-│       └── config/         # 설정 파일 (YAML)
+│   ├── experience_map/      # 경험맵 그래프·노드·프롬프트
+│   ├── correction/          # 첨삭·RAG
+│   └── portfolio/pdf_extraction/ # 첨삭용 PDF 추출
 └── tests/                  # 테스트 (features 구조 미러링)
 ```
 
@@ -57,13 +55,13 @@ pre-commit run --all-files     # 모든 pre-commit 훅 실행
 pytest
 
 # 단일 테스트 파일
-pytest tests/test_features/test_interview/test_config.py
+pytest tests/test_features/test_experience_map/test_config.py
 
 # 특정 테스트 함수
-pytest tests/test_features/test_interview/test_config.py::test_load_stage_config_stage_1
+pytest tests/test_features/test_experience_map/test_config.py::test_defaults_match_api_spec
 
 # 패턴으로 테스트 선택
-pytest -k "test_load_stage"
+pytest -k "test_defaults"
 
 # 상세 출력
 pytest -v
@@ -96,16 +94,16 @@ from langchain_openai import ChatOpenAI
 
 # 3. 퍼스트파티 (app, features, common)
 from common.llm.client import get_llm
-from features.interview.agents import InterviewState
+from features.experience_map.state import ExperienceMapState
 ```
 
 ### 네이밍 컨벤션
 
 | 항목 | 스타일 | 예시 |
 |------|--------|------|
-| 파일/모듈 | snake_case | `question_generator.py` |
-| 클래스 | PascalCase | `InterviewState`, `StageConfig` |
-| 함수/변수 | snake_case | `load_stage_config`, `current_stage` |
+| 파일/모듈 | snake_case | `file_processor.py` |
+| 클래스 | PascalCase | `ExperienceMapState`, `ExperienceMapSettings` |
+| 함수/변수 | snake_case | `get_settings`, `request_id` |
 | 상수 | UPPER_SNAKE_CASE | `MAX_RETRIES`, `DEFAULT_MODEL` |
 | 프라이빗 | _prefix | `_internal_helper` |
 
@@ -163,87 +161,16 @@ if stage not in [1, 2, 3, 4]:
     raise ValueError(f"Invalid stage: {stage}. Must be 1-4.")
 ```
 
-### LangGraph 노드 패턴
+### LangGraph 상태와 모듈
 
-각 노드는 일관된 패턴을 따릅니다:
-
-```python
-def run(state: InterviewState) -> InterviewState:
-    """노드 설명"""
-    # 로직 처리
-    return {
-        **state,
-        "updated_field": new_value,
-        "next_node": "next_node_name",
-    }
-```
-
-### TypedDict 상태 정의
-
-```python
-from typing import Annotated, Literal, TypedDict
-from langgraph.graph.message import add_messages
-
-class InterviewState(TypedDict):
-    """공유 상태 정의"""
-    user_id: str
-    messages: Annotated[list, add_messages]  # 리듀서 사용
-    current_stage: Literal[1, 2, 3, 4]
-    collected_data: dict
-```
-
-### 모듈 구조
-
-- `__init__.py`에서 명시적 익스포트
-- `__all__` 정의로 퍼블릭 API 선언
-
-```python
-# features/interview/agents/__init__.py
-from .graph import build_graph
-from .state import InterviewState
-
-__all__ = ["build_graph", "InterviewState"]
-```
+경험맵 상태는 `features/experience_map/state.py`의 `ExperienceMapState`를 사용합니다.
+공개 심볼은 각 패키지의 `__init__.py`에서 명시적으로 export하고 `__all__`로 관리합니다.
 
 ## 테스트 작성 가이드
 
-### 테스트 파일 구조
-
-`tests/` 디렉토리는 `features/` 구조를 미러링합니다:
-
-```
-features/interview/config/loader.py
-→ tests/test_features/test_interview/test_config.py
-```
-
-### 테스트 패턴
-
-```python
-"""설정 로더 테스트"""
-
-import pytest
-from features.interview.config.loader import load_stage_config, StageConfig
-
-
-def test_load_stage_config_stage_1():
-    """1단계 설정 로드 테스트"""
-    config = load_stage_config(1)
-    assert isinstance(config, StageConfig)
-    assert config.name == "프로젝트 개요 및 구조화"
-
-
-@pytest.fixture
-def initial_state() -> InterviewState:
-    """테스트용 초기 상태 fixture"""
-    return {"user_id": "test", "messages": [], ...}
-
-
-@pytest.mark.parametrize("stage", [1, 2, 3, 4])
-def test_all_stages_valid(stage):
-    """파라미터화된 테스트"""
-    config = load_stage_config(stage)
-    assert config.name
-```
+테스트는 `tests/` 아래에서 기능별 구조를 따릅니다.
+예: `features/experience_map/config.py` → `tests/test_features/test_experience_map/test_config.py`.
+외부 API는 대역을 사용하고, DB 테스트는 개발·운영 DB와 분리한 `EXPMAP_TEST_DATABASE_URL`을 지정합니다.
 
 ## 설정 파일 참조
 
