@@ -2,87 +2,96 @@
 
 ## 실행
 
-저장소 루트에서 실행합니다. Node 버전과 CI는 공통 환경 담당자가 관리합니다.
+명령은 저장소 루트에서 실행합니다. Node·pnpm 설치와 버전은 [루트 개발 도구 안내](../../README.md)를 따릅니다.
 
 ```sh
-pnpm install --frozen-lockfile
-cp apps/web/.env.example apps/web/.env.local
-pnpm exec turbo run build --filter=@folioo/bud-tokens
-pnpm --filter @folioo/web dev
+mise exec -- pnpm install --frozen-lockfile
+
+if [ ! -e apps/web/.env.local ]; then
+  cp apps/web/.env.example apps/web/.env.local
+fi
+
+mise exec -- pnpm run web:dev
 ```
 
-루트 `pnpm dev`는 Turbo의 의존 그래프를 통해 토큰 빌드를 선행합니다.
-웹만 직접 실행할 때는 위처럼 토큰을 먼저 빌드해야 합니다.
+환경 파일이 이미 있으면 유지하고 필요한 항목만 직접 추가합니다. 현재 기본 페이지는 API 환경 변수 없이 실행됩니다.
+위 셸 예시는 sh/bash/zsh 기준입니다.
+
+루트 `web:dev`는 웹으로 실행 범위를 제한하고 Turbo의 의존 그래프를 통해 토큰 빌드를 선행합니다.
+`pnpm --filter @folioo/web dev`로 앱 스크립트를 직접 실행할 때는 토큰을 먼저 빌드해야 합니다.
+BUD 원본을 수정한 경우에도 토큰을 다시 빌드합니다.
 
 ```sh
-pnpm --filter @folioo/web lint
-pnpm exec turbo run check-types build --filter=@folioo/web
-pnpm --filter @folioo/web start
+mise exec -- pnpm exec turbo run build --filter=@folioo/bud-tokens
+mise exec -- pnpm --filter @folioo/web dev
 ```
 
-## 컴파일 경계
+검사는 순서대로 실행합니다.
+
+```sh
+mise exec -- pnpm run web:check
+```
+
+`web:check`는 `web:lint` → `web:check-types` → `web:build`를 순차 실행합니다.
+타입 생성과 빌드가 같은 `.next` 경로를 갱신하므로 두 태스크를 한 번에 나열해 병렬 실행하지 않습니다.
+웹 검사에는 공통 포맷·린트와 AI 검사가 포함되지 않습니다. 기존 공통·프론트·토큰 검사는 `pnpm run check`, AI까지 포함하려면 `pnpm run check:all`을 사용합니다.
+빌드가 성공한 뒤 프로덕션 서버를 실행합니다. 개발 서버와 같은 포트를 사용하는 경우 먼저 개발 서버를 종료합니다.
+
+```sh
+mise exec -- pnpm run web:start
+```
+
+브랜치 전환·페이지 삭제 후 `.next/dev/types`가 사라진 페이지를 참조한다면 개발 서버를 종료하고
+아래 자동 생성 파일만 정리한 뒤 검사를 다시 실행합니다. 평소 매번 삭제할 필요는 없습니다.
+
+```sh
+rm -rf apps/web/.next
+rm -f apps/web/tsconfig.tsbuildinfo
+```
+
+## 현재 빌드 설정
 
 - 웹의 `.css.ts`는 `@vanilla-extract/next-plugin`과 Webpack으로 컴파일합니다.
-- `dev`와 `build` 모두 `--webpack`을 사용합니다. Turborepo와는 별개의 선택입니다.
-- BUD는 공개 진입점 `@folioo/bud-tokens`와 `@folioo/bud-tokens/style.css`만 사용합니다.
-- BUD의 `src`나 `dist` 내부 파일을 직접 import하지 않습니다.
-- 토큰 값과 테마 계약은 BUD가 소유하고 `src/styles/theme.ts`에서 재노출합니다.
-  웹에서 별도의 색상·간격 계약이나 토큰 원본을 만들지 않습니다.
-- 현재 토큰은 `:root` 단일 테마입니다. 다크 모드와 폰트 파일 로딩은 이 설정에 포함하지 않습니다.
+- `dev`와 `build` 모두 `--webpack`을 사용합니다. Turborepo와는 별개의 설정입니다.
+- 웹은 workspace 의존성인 `@folioo/bud-tokens`를 사용합니다.
 
-## SVG import
+## 자동 생성 타입 파일
 
-SVG는 `@svgr/webpack`으로 React 컴포넌트로 변환합니다.
-기존 vanilla-extract 플러그인과 같은 Webpack 설정에서 처리합니다.
-설정 변경 후에는 개발 서버를 재시작합니다.
+`next-env.d.ts`는 Next.js가 `next dev`, `next build`, `next typegen` 실행 시 생성합니다.
+Git 추적·포맷·린트 대상에서 제외하며 직접 수정하지 않습니다.
+`tsconfig.json`의 `include`에는 유지해야 Next.js 타입을 사용할 수 있습니다.
 
-```tsx
-import PlusIcon from '@/assets/icons/plus.svg';
+웹의 `check-types` 명령은 `next typegen && tsc --noEmit` 순서로 실행하므로 새 환경에서도 타입 파일을 먼저 생성합니다.
 
-<PlusIcon width={24} height={24} aria-hidden="true" focusable="false" />;
-```
+Turbo 캐시가 적중하면 명령을 다시 실행하지 않고 이전 로그를 재생하며, `outputs`에 지정한 파일만 복원합니다.
+`next-env.d.ts`와 `.next`는 Git 무시 대상이라 입력 해시에 포함되지 않으므로, 파일을 지워도 캐시가 적중할 수 있습니다.
+그래서 `turbo.json`의 웹 전용 태스크에 생성 파일을 출력으로 지정합니다.
 
-위 경로는 사용 예시입니다. 실제 SVG 파일은 별도로 추가합니다.
-단색 아이콘이 부모의 글자색을 따르려면 SVG의 `fill` 또는 `stroke`를
-`currentColor`로 작성합니다. SVGR는 원본 색상을 자동으로 바꾸지 않습니다.
+| 태스크                    | 캐시 적중 시 복원하는 생성 파일                                            |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `@folioo/web#check-types` | `next-env.d.ts`, `.next/types/**` (`next-env.d.ts`가 참조하는 라우트 타입) |
+| `@folioo/web#build`       | `.next/**`(`.next/cache`·`.next/dev` 제외), `next-env.d.ts`                |
 
-이미지로 사용할 때는 `?url`을 붙여 기존 Next.js 이미지 import를 사용합니다.
-이 경우 import 결과는 문자열 URL이 아닌 `StaticImageData`입니다.
+두 태스크가 같은 `next-env.d.ts`·`.next/types`를 쓰므로 `web:check`·`check`처럼 타입 검사 → 빌드 순서로 실행합니다.
+`next typegen`을 캐시와 관계없이 다시 실행해야 할 때만 `mise exec -- pnpm --filter @folioo/web check-types`로 앱 스크립트를 직접 실행합니다.
 
-```tsx
-import Image from 'next/image';
-import logo from '@/assets/logo.svg?url';
+## 폰트 로딩
 
-<Image src={logo} alt="Folioo" />;
-```
+Pretendard v1.3.9의 공식 가변 WOFF2 원본을 웹에서 직접 제공합니다.
 
-SVG 타입은 `svgr.d.ts`에서 선언합니다. Next.js의 기본 SVG 타입보다 먼저
-적용되도록 `tsconfig.json`의 `include`에서 `next-env.d.ts` 앞에 둡니다.
-Storybook을 Vite로 구성할 때는 해당 설정에도 SVGR 변환을 별도로 연결해야 합니다.
+- 파일: `public/fonts/pretendard/PretendardVariable.woff2` (2,057,688 bytes, 약 1.96 MiB)
+- 출처: [Pretendard v1.3.9 원본](https://github.com/orioncactus/pretendard/blob/v1.3.9/packages/pretendard/dist/web/variable/woff2/PretendardVariable.woff2)
+- 라이선스: SIL Open Font License 1.1. 원본 고지·전문은 [LICENSE.txt](./public/fonts/pretendard/LICENSE.txt)에 포함합니다.
+- SHA-256: `9599f12fd42fc0bce1cd50b47a0c022e108d7aa64dd0d1bb0ed44f3282d900b4`
+- 지원 굵기: 공식 가변 폰트 선언 기준 45–920, normal 스타일. 현재 BUD의 400·500·600·700을 포함합니다.
 
-## CSS 우선순위
+루트 layout이 가져오는 `src/styles/globals.css`의 `@font-face`에서 로딩합니다.
+웹은 원본 폰트의 CSS family를 `Pretendard`로 등록해 기존 BUD 기본 폰트 토큰과 연결합니다.
+BUD 토큰의 이름·값과 생성 소스는 변경하지 않으며, 웹의 폰트 파일 제공 책임과 디자인 토큰을 분리합니다.
 
-일반 선언은 `theme → base → components → utilities` 순서로 우선합니다.
-
-- `theme`: Tailwind 테마와 BUD의 CSS 변수·텍스트 클래스
-- `base`: Tailwind Preflight(reset)와 웹 기본 스타일
-- `components`: vanilla-extract 공용 컴포넌트와 recipes의 각 variant
-- `utilities`: 화면 배치용 Tailwind 유틸리티
-
-새 `.css.ts` 스타일과 variant는 `componentLayer` 안에 정의합니다.
-레이어 밖의 일반 선언은 레이어 안의 선언보다 우선하므로 사용하지 않습니다.
-`!important`는 우선순위 규칙을 바꾸므로 사용하지 않습니다.
-
-## 컴포넌트 조합
-
-- 컴포넌트 내부 색상·간격·라운드는 `vars`를 사용합니다.
-- `className`은 생성된 클래스와 병합하고 실제 DOM 요소에 전달합니다.
-- 문자열에서 클래스의 앞뒤 순서가 CSS 우선순위를 결정하지 않습니다.
-- 화면에서는 `w-full`, `flex`, `grid` 등으로 너비·배치를 조정합니다.
-- 색상·내부 간격·상태 변경은 가능하면 recipes의 명시적인 variant로 제공합니다.
-- 두 Tailwind 유틸리티 사이의 충돌을 자동 해결하는 기능은 포함하지 않습니다.
-- 이벤트 핸들러를 전달하는 사용처는 Client Component 경계 안에서 사용합니다.
-- `Button`과 기본 페이지는 통합 검증용 최소 예시이며 최종 디자인 시스템 API가 아닙니다.
+`font-display: swap`으로 로딩 전에는 fallback을 표시하고 완료 후 전환합니다.
+폰트 파일은 `/fonts/pretendard/PretendardVariable.woff2`에서 요청되며 런타임 CDN 요청이나 로컬 설치 폰트 우선 사용은 설정하지 않습니다.
+전체 가변 파일 하나를 사용하므로 동적 서브셋·분할 로딩 최적화는 포함하지 않습니다.
 
 ## 환경 변수
 
@@ -96,26 +105,9 @@ Storybook을 Vite로 구성할 때는 해당 설정에도 SVGR 변환을 별도�
 - 개발 중 값을 바꾸면 개발 서버를 재시작합니다.
 - `.env.local`과 실제 환경별 값은 Git에 커밋하지 않습니다.
 
-API 호출·타입 생성·SSE·캐시 인계 규칙은 [API·환경 변수 계약](./docs/api-contract.md)에 정리했습니다. 현재 API Client·Provider·코드 생성·계약 CI는 미구현입니다.
+API 주소·인증·요청 계약은 BE·AI 설계가 확정된 후 별도 문서화합니다. 현재 웹의 API Client·Provider·코드 생성·계약 CI는 미구현입니다.
 
-## QA 연결
+## 후속 작업
 
-Storybook·테스트 환경을 구현할 때 다음 경계를 사용합니다. 현재 연결 완료를 뜻하지 않습니다.
-
-| 항목                | 연결 계약                                                                               |
-| ------------------- | --------------------------------------------------------------------------------------- |
-| 컴포넌트 진입점     | `apps/web/src/components/ui/button/index.ts` (`Button`, `ButtonProps`)                  |
-| 웹 내부 import      | `@/components/ui/button`                                                                |
-| 웹 내부 토큰 import | `@/styles/theme`의 `vars`                                                               |
-| 패키지 토큰 import  | `@folioo/bud-tokens`의 `vars`, `text`                                                   |
-| 스타일 진입점       | `apps/web/src/styles/globals.css`를 Storybook preview에서 한 번 로딩                    |
-| alias               | Storybook 설정의 `@`를 **웹의** `apps/web/src` 절대 경로로 연결                         |
-| 선행 작업           | BUD 토큰 패키지 빌드 후 Storybook·테스트 실행                                           |
-| 컴파일              | Vite 기반 Storybook에는 vanilla-extract Vite 플러그인과 Tailwind PostCSS 설정 별도 구성 |
-| CSS 순서            | 웹과 동일한 `theme → base → components → utilities` 유지                                |
-
-Storybook에서 globals.css를 가져오면 BUD CSS도 함께 로딩됩니다. 별도 reset이나 BUD 스타일 중복 import를 추가하지 않습니다. Storybook 프로젝트에서도 workspace 의존성과 패키지 해석을 설정해야 합니다.
-
-현재 검증용 Button은 업무 로직·라우터·API Provider에 의존하지 않습니다. 이벤트 핸들러를 사용하는 Next.js 화면은 Client Component 경계에서 조합합니다. 서버 전용 환경 변수·모듈은 공용 컴포넌트나 Storybook에서 import하지 않습니다.
-
-Storybook·Playwright·Chromatic 실행 명령은 해당 환경 구현 시 추가합니다. 현재는 빈 성공 스크립트를 제공하지 않습니다.
+컴포넌트 API·SVG 사용 방식·CSS 우선순위는 정의가 확정된 후 별도 문서화합니다.
+Storybook·Playwright·Chromatic은 아직 구축하지 않았으며, 현재 테스트 실행 명령은 제공하지 않습니다.

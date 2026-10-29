@@ -2,6 +2,10 @@
   "name": "folioo",
   "private": true,
   "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24.22.1 <25",
+    "pnpm": "10.33.0"
+  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -9,8 +13,14 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
     "check-types": "turbo run check-types",
-    "check": "pnpm format:check && pnpm lint && pnpm check-types && pnpm build",
+    "check": "pnpm format:check && pnpm lint && pnpm run web:lint && pnpm check-types && pnpm build",
     "check:all": "pnpm run check && pnpm run ai:check",
+    "web:dev": "turbo run dev --filter=@folioo/web",
+    "web:lint": "pnpm --filter @folioo/web lint",
+    "web:check-types": "turbo run check-types --filter=@folioo/web",
+    "web:build": "turbo run build --filter=@folioo/web",
+    "web:start": "pnpm --filter @folioo/web start",
+    "web:check": "pnpm run web:lint && pnpm run web:check-types && pnpm run web:build",
     "ai:setup": "pnpm --filter @folioo/ai run setup",
     "ai:setup:local": "pnpm --filter @folioo/ai run setup:local",
     "ai:dev": "pnpm --filter @folioo/ai run serve",

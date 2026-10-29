@@ -11,6 +11,8 @@ export default defineConfig(
     '**/.next/**',
     '**/.turbo/**',
     '**/coverage/**',
+    // 웹은 자체 Next.js 설정과 web job에서 린트합니다.
+    'apps/web/**',
     'packages/bud/tokens/src/tokens/**',
     'packages/bud/tokens/scripts/generate-tokens.mjs',
   ]),

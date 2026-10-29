@@ -24,7 +24,8 @@ Folioo AI는 사용자의 프로젝트 경험을 인터뷰로 구조화하고, �
 
 아래 명령은 **저장소 루트(`folioo`)**에서 실행합니다.
 Python `3.12.14`·uv `0.11.7`은 루트 `mise.toml`로 관리하고, Python 의존성은 기존 `uv.lock`을 사용합니다.
-Node.js·pnpm은 공통 버전인 `20.20.2`·`10.33.0`을 사용합니다.
+Node.js·pnpm도 루트 `mise.toml`의 공통 버전(`24.22.1`·`10.33.0`)을 사용합니다.
+설치·명령 범위는 [루트 개발 안내](../../README.md)를 함께 확인하세요.
 
 mise 설치 후 도구와 의존성을 준비합니다. macOS에서는 `brew install mise`로 설치할 수 있습니다.
 
@@ -89,7 +90,7 @@ LangGraph Studio는 `apps/ai`에서 `uv run --locked langgraph dev`로 실행합
 ## 주요 환경변수
 
 | 변수 | 설명 |
-|---|---|
+| --- | --- |
 | `OPENROUTER_API_KEY` | OpenRouter LLM API 키 |
 | `LLM_MODEL_NAME` | 기본 LLM 모델명 |
 | `PDF_EXTRACTION_MODEL_NAME` | PDF 추출용 LLM 모델명 |
