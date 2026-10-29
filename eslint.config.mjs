@@ -11,6 +11,7 @@ export default defineConfig(
     '**/.next/**',
     '**/.turbo/**',
     '**/coverage/**',
+    'apps/web/next-env.d.ts',
     'packages/bud/tokens/src/tokens/**',
     'packages/bud/tokens/scripts/generate-tokens.mjs',
   ]),

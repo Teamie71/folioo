@@ -50,6 +50,15 @@ rm -f apps/web/tsconfig.tsbuildinfo
 - `dev`와 `build` 모두 `--webpack`을 사용합니다. Turborepo와는 별개의 설정입니다.
 - 웹은 workspace 의존성인 `@folioo/bud-tokens`를 사용합니다.
 
+## 자동 생성 타입 파일
+
+`next-env.d.ts`는 Next.js가 `next dev`, `next build`, `next typegen` 실행 시 생성합니다.
+Git 추적·포맷·린트 대상에서 제외하며 직접 수정하지 않습니다.
+`tsconfig.json`의 `include`에는 유지해야 Next.js 타입을 사용할 수 있습니다.
+
+웹의 `check-types` 명령은 `next typegen && tsc --noEmit` 순서로 실행하므로 새 환경에서도 타입 파일을 먼저 생성합니다.
+생성 여부를 검증할 때는 Turbo 캐시가 검사를 생략하지 않도록 `mise exec -- pnpm --filter @folioo/web check-types`를 직접 실행합니다.
+
 ## 폰트 로딩
 
 Pretendard v1.3.9의 공식 가변 WOFF2 원본을 웹에서 직접 제공합니다.
