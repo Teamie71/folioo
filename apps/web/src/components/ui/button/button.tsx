@@ -2,14 +2,49 @@ import type { ComponentProps } from 'react';
 import type { RecipeVariants } from '@vanilla-extract/recipes';
 import { button } from './button.css';
 
-export type ButtonProps = ComponentProps<'button'> & RecipeVariants<typeof button>;
+type IconOnlyProps = {
+  layout: 'iconOnly';
+} & (
+  | { 'aria-label': string; 'aria-labelledby'?: string }
+  | { 'aria-label'?: string; 'aria-labelledby': string }
+);
 
-export function Button({ variant, size, className, type = 'button', ...props }: ButtonProps) {
+export type ButtonProps = ComponentProps<'button'> &
+  RecipeVariants<typeof button> &
+  ({ layout?: 'withText' } | IconOnlyProps);
+
+export function Button({
+  variant,
+  size,
+  layout,
+  borderWidth,
+  radius,
+  textSize,
+  fontWeight,
+  textDecoration,
+  className,
+  type = 'button',
+  ...props
+}: ButtonProps) {
   return (
     <button
       {...props}
       type={type}
-      className={[button({ variant, size }), className].filter(Boolean).join(' ')}
+      className={[
+        button({
+          variant,
+          size,
+          layout,
+          borderWidth,
+          radius,
+          textSize,
+          textDecoration,
+          fontWeight,
+        }),
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
     />
   );
 }

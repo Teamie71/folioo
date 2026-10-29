@@ -11,7 +11,7 @@ export default function HomePage() {
       <section aria-label="버튼 상태" className="flex flex-wrap items-center gap-4">
         <Button>기본 버튼</Button>
         <Button variant="secondary">보조 버튼</Button>
-        <Button size="sm">작은 버튼</Button>
+        <Button size="small">작은 버튼</Button>
         <Button disabled>비활성 버튼</Button>
       </section>
       <section aria-label="레이아웃 조합" className="space-y-3">
