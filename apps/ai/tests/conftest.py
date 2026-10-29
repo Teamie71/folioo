@@ -6,20 +6,14 @@
 **실제 PostgreSQL에 붙어서 돌립니다.** 동시성(세션당 running 1건)과 lease 만료는
 asyncpg를 mock으로 감싸면 아무것도 검증하지 못합니다.
 
-DB 접속 순서:
+DB 주소는 `EXPMAP_TEST_DATABASE_URL`로 명시해야 합니다. 미설정 시 테스트 시작
+전에 실패하며 개발용 `DATABASE_URL`로 대체하지 않습니다.
+테스트는 DB 스키마를 적용하고, 테스트 전후에 관련 테이블에서
+사용자 ID(`user_id`)가 900만 이상인 행을 삭제합니다.
+반드시 개발·운영 DB와 분리한 테스트 전용 DB를 지정해야 합니다.
 
-1. `EXPMAP_TEST_DATABASE_URL`
-2. `DATABASE_URL` (로컬 개발 클러스터)
-
-둘 다 붙지 않으면 **skip** 합니다. 로컬에서 DB 없이 나머지 테스트만 돌릴 수
-있게 하기 위한 것입니다. 로컬 세팅은
-`docs/architecture/experience-map-local-dev.md` 를 보세요.
-
-단, `EXPMAP_REQUIRE_DB` 가 켜져 있으면 skip 하지 않고 **실패**합니다. CI 는 이
-값을 켜고 돌립니다 — 자세한 이유는 `_db_unavailable` 주석을 보세요.
-
-각 테스트는 **테스트 전용 user_id 대역(9_000_000+)** 을 써서 개발 중인 데이터와
-섞이지 않게 합니다.
+연결 실패는 기본적으로 skip 하지만 `EXPMAP_REQUIRE_DB` 가 켜져 있으면
+실패합니다. CI 와 루트 `ai:test` 명령은 이 값을 켜고 돌립니다.
 
 풀은 테스트마다 새로 엽니다. pytest-asyncio의 이벤트 루프가 테스트 단위라
 session 스코프 풀을 공유하면 커넥션이 다른 루프에 묶입니다.
@@ -38,14 +32,14 @@ from features.experience_map.map_context import ExperienceMapSnapshot, build_map
 try:
     from dotenv import load_dotenv
 
-    # 로컬 개발 DB 주소는 .env 에 있다. pytest 는 이를 자동으로 읽지 않는다.
+    # 명시한 테스트 DB 주소 등 로컬 환경변수를 읽는다.
     load_dotenv()
 except ImportError:
     pass
 
 SCHEMA_SQL = pathlib.Path(__file__).resolve().parents[1] / "scripts/experience_map/schema.sql"
 
-# 개발 데이터와 겹치지 않는 대역
+# 테스트 데이터 정리 기준: 사용자 ID 900만 이상
 TEST_USER_ID_BASE = 9_000_000
 
 REQUIRED_TABLES = ("ai_experience_session", "ai_experience_request")
@@ -76,12 +70,25 @@ def _db_unavailable(reason: str) -> NoReturn:
 _schema_state: str | None = None
 
 
-def _database_url() -> str | None:
-    for name in ("EXPMAP_TEST_DATABASE_URL", "DATABASE_URL"):
-        url = os.getenv(name, "").strip()
-        if url:
-            return url
-    return None
+def _database_url() -> str:
+    """공백을 제거한 테스트 전용 DB 주소를 반환한다.
+
+    EXPMAP_TEST_DATABASE_URL이 없거나 공백뿐이면 pytest.UsageError를 발생시킨다.
+    개발용 DATABASE_URL로 대체하지 않는다.
+    """
+    url = os.getenv("EXPMAP_TEST_DATABASE_URL", "").strip()
+    if not url:
+        raise pytest.UsageError(
+            "EXPMAP_TEST_DATABASE_URL이 필요합니다. "
+            "개발·운영 DB와 분리한 테스트 전용 DB 주소를 지정하세요. "
+            "DATABASE_URL은 테스트에 사용하지 않습니다."
+        )
+    return url
+
+
+def pytest_sessionstart(session: pytest.Session) -> None:
+    """DB에 접근하기 전에 테스트 전용 주소를 확인한다."""
+    _database_url()
 
 
 async def _ensure_schema(pool: asyncpg.Pool) -> str | None:
@@ -118,11 +125,12 @@ async def _ensure_schema(pool: asyncpg.Pool) -> str | None:
 
 @pytest_asyncio.fixture
 async def db_pool():
-    """경험 맵 DB 커넥션 풀. 붙지 않으면 skip."""
-    url = _database_url()
-    if not url:
-        _db_unavailable("DATABASE_URL 이 없습니다. 로컬 DB 세팅 후 다시 실행하세요.")
+    """테스트용 DB 커넥션 풀을 제공하고 사용 후 닫는다.
 
+    DB 연결 또는 스키마 준비 실패 시 기본적으로 skip한다.
+    EXPMAP_REQUIRE_DB가 활성화되어 있으면 실패 처리한다.
+    """
+    url = _database_url()
     try:
         pool = await asyncpg.create_pool(url, min_size=1, max_size=5, timeout=3)
     except Exception as exc:  # noqa: BLE001 - 접속 실패 사유는 메시지로 충분하다

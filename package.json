@@ -9,7 +9,17 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
     "check-types": "turbo run check-types",
-    "check": "pnpm format:check && pnpm lint && pnpm check-types && pnpm build"
+    "check": "pnpm format:check && pnpm lint && pnpm check-types && pnpm build",
+    "check:all": "pnpm run check && pnpm run ai:check",
+    "ai:setup": "pnpm --filter @folioo/ai run setup",
+    "ai:setup:local": "pnpm --filter @folioo/ai run setup:local",
+    "ai:dev": "pnpm --filter @folioo/ai run serve",
+    "ai:dev:external": "pnpm --filter @folioo/ai run serve:external",
+    "ai:lint": "turbo run lint --filter=@folioo/ai",
+    "ai:format": "pnpm --filter @folioo/ai run format",
+    "ai:format:check": "turbo run format:check --filter=@folioo/ai",
+    "ai:test": "EXPMAP_REQUIRE_DB=1 turbo run test --filter=@folioo/ai",
+    "ai:check": "pnpm run ai:lint && pnpm run ai:format:check && pnpm run ai:test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
