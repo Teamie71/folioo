@@ -55,5 +55,5 @@ sprint: ""
 - 추출 결과가 비어 있으면 `FileUnreadableError` 다. 빈 문서·이미지만 있는 문서·스캔 품질 문제가 여기 걸린다.
 - 이미 추출한 파일은 건너뛴다. 재시도할 때 원본이 없어도 이어서 간다.
 - 전체 길이 상한을 넘으면 **뒤쪽을 버린다.** 앞에 올린 파일이 대개 더 중요하다.
-- `markitdown[docx,pptx]` 를 main 의존성으로 올렸다. 이미 template-tools·pptx-worker 그룹에 같은 버전이 있어 해석 위험이 없다.
+- DOCX·PPTX 입력은 표준 라이브러리 `zipfile`·`ElementTree`로 읽는다. PPTX 생성 기능 제거 후에도 입력 추출은 유지한다.
 - OCR 은 기존 `get_file_processor_llm()` 을 재사용한다 (timeout 120, max_retries 0).

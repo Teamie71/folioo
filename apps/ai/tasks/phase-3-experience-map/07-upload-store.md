@@ -51,6 +51,6 @@ sprint: ""
 
 - 개인정보가 담긴 이력서·포트폴리오가 올라온다. 삭제 시점과 로깅 정책이 이 태스크의 핵심이다.
 - 결과: `1095 passed` (신규 37). ruff check·format 통과.
-- pptx-worker 의 `GcsClient` 는 job/template 키 기반 동기 클라이언트라 재사용하지 않았다. `ObjectStore` Protocol 로 GCS 를 감싸 테스트에서 대체한다.
+- 경험맵 업로드는 `ObjectStore` Protocol로 GCS를 감싸 테스트에서 대체한다.
 - **UTF-8 증분 디코더를 쓴다.** 고정 길이 probe 로 자르면 3바이트인 한글이 문자 중간에서 끊겨 정상 한글 txt 가 전부 거부된다. 테스트가 이 버그를 잡았다.
 - 만료 정리는 `sweep_expired()` 로 구현했다. bucket lifecycle 규칙으로 대체 가능하며 둘 중 하나만 있으면 된다.

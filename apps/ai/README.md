@@ -114,9 +114,4 @@ LangGraph Studio는 `apps/ai`에서 `uv run --locked langgraph dev`로 실행합
 ## 아키텍처 문서
 
 - `docs/architecture/sse-streaming.md`: 인터뷰 SSE 스트리밍 이벤트 프로토콜
-- `docs/architecture/worker-runtime.md`: 시각화 워커 실행 환경과 큐 핸들러 패턴
-- `docs/architecture/worker-spec.md`: 시각화 워커 사양과 인프라 구조
-- `docs/architecture/template-system.md`: PPTX 템플릿 시스템
-- `docs/architecture/ooxml-editing.md`: OOXML 편집 방식
-- `docs/architecture/qa-and-guardrails.md`: QA 및 가드레일
 - `docs/adr/`: 주요 아키텍처 의사결정 기록

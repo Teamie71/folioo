@@ -1,7 +1,7 @@
 # Main Server Cloud Run Deployment
 
-이 디렉터리는 루트 FastAPI/LangGraph 인터뷰 서버(`app/main.py`)를 `pptx-worker`와
-분리된 Cloud Run 서비스로 배포하기 위한 이미지 빌드, 서비스 사양을 담는다.
+이 디렉터리는 FastAPI/LangGraph AI 서버(`app/main.py`)를 Cloud Run 서비스로
+배포하기 위한 이미지 빌드, 서비스 사양을 담는다.
 
 DB(Supabase Postgres)는 그대로 유지하고 `DATABASE_URL` / `CHECKPOINT_DATABASE_URL`로
 외부 접속만 한다. VPC 커넥터는 필요 없다 (Supabase가 공인 접속을 지원).
