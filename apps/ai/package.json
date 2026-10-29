@@ -5,6 +5,7 @@
     "setup": "uv sync --locked --dev",
     "setup:local": "uv sync --locked --dev --group local-db",
     "serve": "uv run --locked --group local-db python main.py",
+    "serve:external": "uv run --locked python main.py",
     "lint": "uv run --locked ruff check .",
     "format": "uv run --locked ruff format .",
     "format:check": "uv run --locked ruff format --check .",

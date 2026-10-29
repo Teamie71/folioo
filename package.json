@@ -14,6 +14,7 @@
     "ai:setup": "pnpm --filter @folioo/ai run setup",
     "ai:setup:local": "pnpm --filter @folioo/ai run setup:local",
     "ai:dev": "pnpm --filter @folioo/ai run serve",
+    "ai:dev:external": "pnpm --filter @folioo/ai run serve:external",
     "ai:lint": "turbo run lint --filter=@folioo/ai",
     "ai:format": "pnpm --filter @folioo/ai run format",
     "ai:format:check": "turbo run format:check --filter=@folioo/ai",

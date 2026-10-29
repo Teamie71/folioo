@@ -36,8 +36,9 @@ pnpm install --frozen-lockfile
 pnpm run ai:setup:local
 ```
 
-`eval`은 현재 zsh 터미널에 지정 버전을 적용합니다. 새 터미널에서도 사용하려면
-`~/.zshrc`에 같은 줄을 한 번 추가하세요. 셸을 활성화하지 않으면 각 명령 앞에 `mise exec --`를 붙입니다.
+Bash에서는 활성화 명령을 `eval "$(mise activate bash)"`로 바꿉니다.
+새 터미널에서도 적용하려면 해당 줄을 zsh는 `~/.zshrc`, Bash는 `~/.bashrc`에 한 번 추가하세요.
+셸을 활성화하지 않으면 각 명령 앞에 `mise exec --`를 붙입니다.
 
 `apps/ai/.env.example`을 참고해 `apps/ai/.env`와 개발 DB를 준비한 뒤 실행합니다.
 로컬 DB 준비는 [기존 개발 안내](docs/architecture/experience-map-local-dev.md)를 참고하세요.
@@ -45,6 +46,10 @@ pnpm run ai:setup:local
 ```bash
 pnpm run ai:dev
 ```
+
+외부 PostgreSQL을 사용하는 경우 `pnpm run ai:setup` 후 `pnpm run ai:dev:external`로 실행합니다.
+이 명령은 로컬 DB 도구(`local-db` 그룹)를 설치하지 않습니다. `.env`의 DB 주소는 별도로 설정해야 합니다.
+Linux ARM64처럼 `pgserver`를 지원하지 않는 환경에서도 이 방식을 사용합니다.
 
 AI 서버는 `ai:dev`로 따로 실행합니다. 공통 `pnpm dev`에는 포함되지 않습니다.
 
@@ -57,7 +62,8 @@ AI 서버는 `ai:dev`로 따로 실행합니다. 공통 `pnpm dev`에는 포함�
 | --- | --- |
 | `pnpm run ai:setup` | 기본·개발 의존성 설치 |
 | `pnpm run ai:setup:local` | 로컬 DB 도구까지 설치 |
-| `pnpm run ai:dev` | 서버 실행 |
+| `pnpm run ai:dev` | 로컬 DB 도구를 포함해 서버 실행 |
+| `pnpm run ai:dev:external` | 외부 PostgreSQL 환경에서 서버 실행 |
 | `pnpm run ai:lint` | 린트 검사 |
 | `pnpm run ai:format:check` | 포맷 검사 |
 | `pnpm run ai:format` | 포맷 수정 |
@@ -72,7 +78,9 @@ AI 서버는 `ai:dev`로 따로 실행합니다. 공통 `pnpm dev`에는 포함�
 EXPMAP_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55432/folioo_ai_test OPENROUTER_API_KEY=ci-dummy-key pnpm run ai:check
 ```
 
-`ai:test`는 DB 연결이 없으면 실패합니다. 기존 `pnpm check`에는 AI 도구와 테스트 DB가 필요 없습니다.
+`EXPMAP_TEST_DATABASE_URL`은 직접 `pytest`를 실행할 때도 필수입니다. 미설정 시 테스트 시작 전에 실패하며,
+개발용 `DATABASE_URL`을 대신 사용하지 않습니다. 반드시 개발·운영 DB와 분리한 테스트 DB 주소를 지정하세요.
+`ai:test`는 DB 연결에 실패해도 실패 처리합니다. 기존 `pnpm check`에는 AI 도구와 테스트 DB가 필요 없습니다.
 AI 검사는 캐시 없이 실행하고, CI도 같은 `ai:*` 명령을 사용합니다.
 위 명령은 macOS·Linux 셸 기준이며 Windows에서는 WSL을 사용합니다.
 
