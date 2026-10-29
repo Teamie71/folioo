@@ -6,6 +6,7 @@ import process from 'node:process';
 const PART_PATHS = Object.freeze({
   bud: ['packages/bud/'],
   web: ['apps/web/', 'packages/bud/'],
+  ai: ['apps/ai/'],
 });
 
 const PART_FREE_PATTERNS = [
