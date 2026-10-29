@@ -71,6 +71,11 @@ _schema_state: str | None = None
 
 
 def _database_url() -> str:
+    """공백을 제거한 테스트 전용 DB 주소를 반환한다.
+
+    EXPMAP_TEST_DATABASE_URL이 없거나 공백뿐이면 pytest.UsageError를 발생시킨다.
+    개발용 DATABASE_URL로 대체하지 않는다.
+    """
     url = os.getenv("EXPMAP_TEST_DATABASE_URL", "").strip()
     if not url:
         raise pytest.UsageError(
@@ -120,7 +125,11 @@ async def _ensure_schema(pool: asyncpg.Pool) -> str | None:
 
 @pytest_asyncio.fixture
 async def db_pool():
-    """경험 맵 DB 커넥션 풀. 붙지 않으면 skip."""
+    """테스트용 DB 커넥션 풀을 제공하고 사용 후 닫는다.
+
+    DB 연결 또는 스키마 준비 실패 시 기본적으로 skip한다.
+    EXPMAP_REQUIRE_DB가 활성화되어 있으면 실패 처리한다.
+    """
     url = _database_url()
     try:
         pool = await asyncpg.create_pool(url, min_size=1, max_size=5, timeout=3)

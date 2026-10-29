@@ -13,6 +13,7 @@ def test_config(request):
 
 @pytest.mark.parametrize("test_url", [None, "", "   "])
 def test_requires_explicit_test_database_url(monkeypatch, test_url, test_config):
+    """테스트 DB 주소가 없거나 공백뿐이면 개발 DB로 대체하지 않고 오류를 내는지 검증한다."""
     monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/development")
     if test_url is None:
         monkeypatch.delenv("EXPMAP_TEST_DATABASE_URL", raising=False)
