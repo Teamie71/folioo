@@ -11,29 +11,34 @@ if [ ! -e apps/web/.env.local ]; then
   cp apps/web/.env.example apps/web/.env.local
 fi
 
-mise exec -- pnpm exec turbo run build --filter=@folioo/bud-tokens
-mise exec -- pnpm --filter @folioo/web dev
+mise exec -- pnpm run web:dev
 ```
 
 환경 파일이 이미 있으면 유지하고 필요한 항목만 직접 추가합니다. 현재 기본 페이지는 API 환경 변수 없이 실행됩니다.
 위 셸 예시는 sh/bash/zsh 기준입니다.
 
-루트 `mise exec -- pnpm dev`는 Turbo의 의존 그래프를 통해 토큰 빌드를 선행합니다.
-웹만 직접 실행할 때는 위처럼 토큰을 먼저 빌드해야 합니다. BUD 원본을 수정한 경우에도 토큰을 다시 빌드합니다.
+루트 `web:dev`는 웹으로 실행 범위를 제한하고 Turbo의 의존 그래프를 통해 토큰 빌드를 선행합니다.
+`pnpm --filter @folioo/web dev`로 앱 스크립트를 직접 실행할 때는 토큰을 먼저 빌드해야 합니다.
+BUD 원본을 수정한 경우에도 토큰을 다시 빌드합니다.
+
+```sh
+mise exec -- pnpm exec turbo run build --filter=@folioo/bud-tokens
+mise exec -- pnpm --filter @folioo/web dev
+```
 
 검사는 순서대로 실행합니다.
 
 ```sh
-mise exec -- pnpm --filter @folioo/web lint &&
-mise exec -- pnpm exec turbo run check-types --filter=@folioo/web &&
-mise exec -- pnpm exec turbo run build --filter=@folioo/web
+mise exec -- pnpm run web:check
 ```
 
+`web:check`는 `web:lint` → `web:check-types` → `web:build`를 순차 실행합니다.
 타입 생성과 빌드가 같은 `.next` 경로를 갱신하므로 두 태스크를 한 번에 나열해 병렬 실행하지 않습니다.
+웹 검사에는 공통 포맷·린트와 AI 검사가 포함되지 않습니다. 기존 공통·프론트·토큰 검사는 `pnpm run check`, AI까지 포함하려면 `pnpm run check:all`을 사용합니다.
 빌드가 성공한 뒤 프로덕션 서버를 실행합니다. 개발 서버와 같은 포트를 사용하는 경우 먼저 개발 서버를 종료합니다.
 
 ```sh
-mise exec -- pnpm --filter @folioo/web start
+mise exec -- pnpm run web:start
 ```
 
 브랜치 전환·페이지 삭제 후 `.next/dev/types`가 사라진 페이지를 참조한다면 개발 서버를 종료하고
