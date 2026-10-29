@@ -50,6 +50,24 @@ rm -f apps/web/tsconfig.tsbuildinfo
 - `dev`와 `build` 모두 `--webpack`을 사용합니다. Turborepo와는 별개의 설정입니다.
 - 웹은 workspace 의존성인 `@folioo/bud-tokens`를 사용합니다.
 
+## 폰트 로딩
+
+Pretendard v1.3.9의 공식 가변 WOFF2 원본을 웹에서 직접 제공합니다.
+
+- 파일: `public/fonts/pretendard/PretendardVariable.woff2` (2,057,688 bytes, 약 1.96 MiB)
+- 출처: [Pretendard v1.3.9 원본](https://github.com/orioncactus/pretendard/blob/v1.3.9/packages/pretendard/dist/web/variable/woff2/PretendardVariable.woff2)
+- 라이선스: SIL Open Font License 1.1. 원본 고지·전문은 [LICENSE.txt](./public/fonts/pretendard/LICENSE.txt)에 포함합니다.
+- SHA-256: `9599f12fd42fc0bce1cd50b47a0c022e108d7aa64dd0d1bb0ed44f3282d900b4`
+- 지원 굵기: 공식 가변 폰트 선언 기준 45–920, normal 스타일. 현재 BUD의 400·500·600·700을 포함합니다.
+
+루트 layout이 가져오는 `src/styles/globals.css`의 `@font-face`에서 로딩합니다.
+웹은 원본 폰트의 CSS family를 `Pretendard`로 등록해 기존 BUD 기본 폰트 토큰과 연결합니다.
+BUD 토큰의 이름·값과 생성 소스는 변경하지 않으며, 웹의 폰트 파일 제공 책임과 디자인 토큰을 분리합니다.
+
+`font-display: swap`으로 로딩 전에는 fallback을 표시하고 완료 후 전환합니다.
+폰트 파일은 `/fonts/pretendard/PretendardVariable.woff2`에서 요청되며 런타임 CDN 요청이나 로컬 설치 폰트 우선 사용은 설정하지 않습니다.
+전체 가변 파일 하나를 사용하므로 동적 서브셋·분할 로딩 최적화는 포함하지 않습니다.
+
 ## 환경 변수
 
 현재 스타일 검증 페이지는 환경 변수 없이 실행됩니다. `.env.local` 복사는 설정 파일을 준비하는 단계이며, 예시의 API 변수는 주석 상태로 둬도 됩니다.
