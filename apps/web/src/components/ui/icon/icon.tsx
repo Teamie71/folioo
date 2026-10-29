@@ -9,6 +9,9 @@ export type IconProps = Omit<ComponentProps<'span'>, 'children' | 'color'> & {
 };
 
 export function Icon({ svg, size, color, className, style, ...props }: IconProps) {
+  const hasAccessibleName = Boolean(
+    props['aria-label']?.trim() || props['aria-labelledby']?.trim(),
+  );
   const iconStyle: CSSProperties & { [iconColorVar]?: IconProps['color'] } = {
     ...style,
     ...(size === undefined ? {} : { width: size, height: size }),
@@ -18,7 +21,8 @@ export function Icon({ svg, size, color, className, style, ...props }: IconProps
   return (
     <span
       {...props}
-      aria-hidden="true"
+      aria-hidden={props['aria-hidden'] ?? !hasAccessibleName}
+      role={props.role ?? (hasAccessibleName ? 'img' : undefined)}
       className={[icon, className].filter(Boolean).join(' ')}
       style={iconStyle}
     >
