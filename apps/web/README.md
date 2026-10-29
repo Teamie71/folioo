@@ -62,7 +62,18 @@ Git 추적·포맷·린트 대상에서 제외하며 직접 수정하지 않습�
 `tsconfig.json`의 `include`에는 유지해야 Next.js 타입을 사용할 수 있습니다.
 
 웹의 `check-types` 명령은 `next typegen && tsc --noEmit` 순서로 실행하므로 새 환경에서도 타입 파일을 먼저 생성합니다.
-생성 여부를 검증할 때는 Turbo 캐시가 검사를 생략하지 않도록 `mise exec -- pnpm --filter @folioo/web check-types`를 직접 실행합니다.
+
+Turbo 캐시가 적중하면 명령을 다시 실행하지 않고 이전 로그를 재생하며, `outputs`에 지정한 파일만 복원합니다.
+`next-env.d.ts`와 `.next`는 Git 무시 대상이라 입력 해시에 포함되지 않으므로, 파일을 지워도 캐시가 적중할 수 있습니다.
+그래서 `turbo.json`의 웹 전용 태스크에 생성 파일을 출력으로 지정합니다.
+
+| 태스크                    | 캐시 적중 시 복원하는 생성 파일                                            |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `@folioo/web#check-types` | `next-env.d.ts`, `.next/types/**` (`next-env.d.ts`가 참조하는 라우트 타입) |
+| `@folioo/web#build`       | `.next/**`(`.next/cache`·`.next/dev` 제외), `next-env.d.ts`                |
+
+두 태스크가 같은 `next-env.d.ts`·`.next/types`를 쓰므로 `web:check`·`check`처럼 타입 검사 → 빌드 순서로 실행합니다.
+`next typegen`을 캐시와 관계없이 다시 실행해야 할 때만 `mise exec -- pnpm --filter @folioo/web check-types`로 앱 스크립트를 직접 실행합니다.
 
 ## 폰트 로딩
 

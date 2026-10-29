@@ -7,7 +7,15 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "!.next/dev/**"]
+      "outputs": ["dist/**"]
+    },
+    "@folioo/web#check-types": {
+      "dependsOn": ["^build"],
+      "outputs": ["next-env.d.ts", ".next/types/**"]
+    },
+    "@folioo/web#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**", "next-env.d.ts"]
     },
     "dev": {
       "dependsOn": ["^build"],
