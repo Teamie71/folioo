@@ -61,7 +61,7 @@ rm -f apps/web/tsconfig.tsbuildinfo
 Git 추적·포맷·린트 대상에서 제외하며 직접 수정하지 않습니다.
 `tsconfig.json`의 `include`에는 유지해야 Next.js 타입을 사용할 수 있습니다.
 
-웹의 `check-types` 명령은 `next typegen && tsc --noEmit` 순서로 실행하므로 새 환경에서도 타입 파일을 먼저 생성합니다.
+웹의 `check-types` 명령은 `next typegen` → `tsc --noEmit` 순서로 실행하므로 새 환경에서도 Next.js 타입 파일을 먼저 생성합니다.
 
 Turbo 캐시가 적중하면 명령을 다시 실행하지 않고 이전 로그를 재생하며, `outputs`에 지정한 파일만 복원합니다.
 `next-env.d.ts`와 `.next`는 Git 무시 대상이라 입력 해시에 포함되지 않으므로, 파일을 지워도 캐시가 적중할 수 있습니다.
@@ -74,6 +74,49 @@ Turbo 캐시가 적중하면 명령을 다시 실행하지 않고 이전 로그�
 
 두 태스크가 같은 `next-env.d.ts`·`.next/types`를 쓰므로 `web:check`·`check`처럼 타입 검사 → 빌드 순서로 실행합니다.
 `next typegen`을 캐시와 관계없이 다시 실행해야 할 때만 `mise exec -- pnpm --filter @folioo/web check-types`로 앱 스크립트를 직접 실행합니다.
+
+## 아이콘 관리
+
+아이콘은 웹 앱 내부에서 SVG 원본으로 관리하고, 수동 명령으로 SVGR CLI를 실행하여 React 컴포넌트를 생성합니다.
+
+```text
+apps/web/
+├── public/icons/                # 직접 관리하는 SVG 원본
+└── src/components/icons/        # 아래 파일은 모두 수동 명령으로 생성
+    ├── KakaoIcon.tsx
+    ├── NaverIcon.tsx
+    ├── PlusIcon.tsx
+    └── index.ts                 # 개별 아이콘을 바로 export하는 진입점
+```
+
+아이콘을 추가·수정·삭제하거나 파일명을 변경한 경우 다음 순서로 반영합니다.
+
+1. `public/icons/`의 SVG 원본을 변경합니다.
+2. 아래 명령으로 TSX 컴포넌트와 export 목록을 생성합니다.
+3. `@/components/icons`에서 필요한 아이콘을 가져와 사용하고, 변경 결과를 확인합니다.
+4. SVG 원본과 `src/components/icons/`의 변경 사항을 함께 커밋합니다.
+
+```sh
+mise exec -- pnpm --filter @folioo/web generate:icons
+```
+
+`dev`·`build`·`check-types` 및 CI에서는 아이콘을 다시 생성하지 않고, 커밋된 TSX 파일을 사용합니다.
+생성 스크립트는 기존 `src/components/icons/` 전체를 정리하고 다시 생성하므로, 삭제하거나 이름을 변경한 아이콘의 이전 파일이 남지 않습니다.
+이 폴더는 생성 파일 전용이며, `index.ts`를 포함해 직접 작성한 코드를 두거나 수정하지 않습니다.
+생성 파일은 Git 관리 대상입니다. 포맷·린트 대상에서는 제외하고 타입 검사는 수행합니다.
+SVG 원본 변경을 감지하는 별도 watch 기능은 없습니다.
+
+```tsx
+import { KakaoIcon } from '@/components/icons';
+import { Icon } from '@/components/ui/icon';
+
+<Icon svg={<KakaoIcon />} size={20} />;
+```
+
+크기·색상·접근성 처리는 기존 `Icon`·`PrefixIcon`·`SuffixIcon`을 사용합니다.
+색상 변경이 필요한 단색 SVG의 `fill`·`stroke`는 원본에서 `currentColor`로 설정합니다.
+`fill="none"`과 다색 아이콘에서 유지해야 하는 색상은 그대로 둡니다.
+웹에서 생성된 TSX를 직접 컴파일하므로 별도 아이콘 패키지 빌드나 SVGR Webpack 로더는 사용하지 않습니다.
 
 ## 폰트 로딩
 

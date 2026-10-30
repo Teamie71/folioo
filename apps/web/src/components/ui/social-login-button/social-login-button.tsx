@@ -1,7 +1,6 @@
 import type { ComponentProps } from 'react';
+import { KakaoIcon, NaverIcon } from '@/components/icons';
 import { Button } from '../button';
-import KakaoIcon from '@/assets/icons/kakako.svg';
-import NaverIcon from '@/assets/icons/naver.svg';
 import { PrefixIcon } from '../icon';
 import { socialLoginButton } from './social-login-button.css';
 import { vars } from '@folioo/bud-tokens';
