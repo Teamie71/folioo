@@ -9,6 +9,7 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@folioo/bud-icons": "workspace:*",
     "@folioo/bud-tokens": "workspace:*",
     "@hookform/resolvers": "6.0.0",
     "@tanstack/react-query": "5.104.5",

@@ -34,6 +34,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@folioo/bud-icons':
+        specifier: workspace:*
+        version: link:../../packages/bud/icons
       '@folioo/bud-tokens':
         specifier: workspace:*
         version: link:../../packages/bud/tokens
