@@ -19,7 +19,7 @@
     },
     "@folioo/bud-icons#build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "src/generated/**"]
+      "outputs": ["dist/**", "src/icons/**"]
     },
     "@folioo/bud-icons#check-types": {
       "dependsOn": ["build"],

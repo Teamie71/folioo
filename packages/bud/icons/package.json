@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "clean:generated": "node scripts/clean-generated.mjs",
-    "generate": "pnpm run clean:generated && svgr --config-file .svgrrc.json --out-dir src/generated -- svg",
+    "generate": "pnpm run clean:generated && svgr --config-file .svgrrc.json --out-dir src/icons -- svg",
     "build": "pnpm run generate && tsup",
     "check-types": "tsc --noEmit"
   },
