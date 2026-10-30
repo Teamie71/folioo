@@ -1,0 +1,20 @@
+{
+  "typescript": true,
+  "jsxRuntime": "automatic",
+  "expandProps": "end",
+  "dimensions": true,
+  "svgo": true,
+  "svgoConfig": {
+    "plugins": [
+      {
+        "name": "preset-default",
+        "params": {
+          "overrides": {
+            "removeViewBox": false
+          }
+        }
+      },
+      "prefixIds"
+    ]
+  }
+}
