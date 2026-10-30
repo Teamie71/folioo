@@ -1,5 +1,8 @@
 # 포트폴리오 첨삭 v.3.5 대응 PR 분할 계획
 
+> 과거 구현 계획·검증 기록입니다. 현재 AI 진입점은 `rag`, `generate`, 기본 `pdf-extraction`이며, 조회·수정·삭제·구형 재시도·PDF 스트림 API는 제거했습니다.
+
+
 > **범위**: 화면설계서 v.3.5 [포트폴리오 첨삭] 섹션과 folioo-ai(AI 서버) 구현의 차이를
 > PR 단위로 쪼갠 실행 계획.
 >
@@ -198,7 +201,7 @@ CR-02, CR-03, CR-06 : 독립
 
 **구현 체크리스트**
 
-- [x] `docs/architecture/pdf-extraction-streaming.md` 신규 작성 (제안 상태)
+- [x] PDF 스트리밍 계약 작성 (해당 기능·문서는 v3 미사용 API 정리에서 제거)
   - [x] 전달 방식 제안: **(A) AI SSE + 메인 프록시** — 인터뷰 스트리밍과 같은 구조
   - [x] LLM 호출 분할 제안: **(가) 응답 스트리밍 파싱** — 호출 1회 유지
   - [x] 이벤트 스키마: `extraction_started` / `activity_completed` /

@@ -105,6 +105,15 @@ LangGraph Studio는 `apps/ai`에서 `uv run --locked langgraph dev`로 실행합
 
 ## API 문서
 
+첨삭은 메인 서버가 호출하는 다음 세 경로를 제공합니다.
+
+- `POST /api/v1/corrections/{correction_id}/rag`
+- `POST /api/v1/corrections/{correction_id}/generate`
+- `POST /api/v1/corrections/{correction_id}/pdf-extraction`
+
+첨삭 입력·포트폴리오 원문 조회와 결과·상태 저장은 `MAIN_BACKEND_URL`의 내부 API를 사용합니다.
+사용자용 조회·수정·삭제·재시도는 메인 서버가 담당합니다.
+
 서버 실행 후 다음 경로에서 OpenAPI 문서를 확인할 수 있습니다.
 
 - Swagger UI: `/docs`

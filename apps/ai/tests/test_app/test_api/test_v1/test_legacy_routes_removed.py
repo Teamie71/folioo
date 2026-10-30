@@ -16,6 +16,14 @@ from app.main import create_app
         ("POST", "/api/v1/interview/sessions/{session_id}/extend/stream"),
         ("GET", "/api/v1/interview/sessions/{session_id}/state"),
         ("GET", "/api/v1/interview/sessions/{session_id}/status"),
+        ("DELETE", "/api/v1/corrections/{correction_id}"),
+        ("GET", "/api/v1/corrections/{correction_id}"),
+        ("GET", "/api/v1/corrections/{correction_id}/company-insight"),
+        ("PATCH", "/api/v1/corrections/{correction_id}/company-insight"),
+        ("PATCH", "/api/v1/corrections/{correction_id}/emphasis-points"),
+        ("POST", "/api/v1/corrections/{correction_id}/pdf-extraction/stream"),
+        ("POST", "/api/v1/corrections/{correction_id}/retry"),
+        ("GET", "/api/v1/corrections/{correction_id}/status"),
         ("POST", "/api/v1/portfolio/generate"),
         ("GET", "/api/v1/portfolio/session/{session_id}"),
         ("GET", "/api/v1/portfolio/{portfolio_id}"),
@@ -24,7 +32,7 @@ from app.main import create_app
     ],
 )
 def test_legacy_routes_are_not_registered(method, path):
-    """공유 API 계약에서 폐기한 인터뷰·포트폴리오 경로를 노출하지 않는다."""
+    """공유 API 계약에서 폐기한 인터뷰·포트폴리오·첨삭 보조 경로를 노출하지 않는다."""
     routes = {
         (route.path, verb)
         for route in create_app().routes

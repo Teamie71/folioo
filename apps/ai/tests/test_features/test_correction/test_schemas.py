@@ -2,15 +2,8 @@
 
 import pytest
 
-from app.schemas.correction import (
-    CorrectionResultResponse,
-    CreateCorrectionRequest,
-    UpdateCompanyInsightRequest,
-    UpdateEmphasisPointsRequest,
-)
 from features.correction.schemas import (
     CorrectionOutput,
-    CorrectionStatus,
     PortfolioCorrectionResult,
     SingleCorrectionDecisionOutput,
     SingleCorrectionOutput,
@@ -181,67 +174,6 @@ def test_correction_output_schema():
 
     assert output.portfolio_corrections[0].portfolio_id == 101
     assert output.overall_summary == "전체 포트폴리오 총평"
-
-
-def test_create_correction_request_schema():
-    """CreateCorrectionRequest 스키마 생성 테스트"""
-    request = CreateCorrectionRequest(
-        portfolio_id="portfolio-1",
-        user_id="user-1",
-        company_name="테스트 회사",
-        job_title="백엔드 개발자",
-        job_description="직무 설명",
-    )
-
-    assert request.portfolio_id == "portfolio-1"
-    assert request.user_id == "user-1"
-
-
-def test_correction_result_response_schema():
-    """CorrectionResultResponse 스키마 생성 테스트"""
-    response = CorrectionResultResponse(
-        correction_id="correction-1",
-        status=CorrectionStatus.DONE,
-        result=CorrectionOutput.model_validate(
-            {
-                "portfolio_corrections": [
-                    {"portfolio_id": 101, "fields": _sample_fields()},
-                ],
-                "overall_summary": "총평",
-            }
-        ),
-    )
-
-    assert response.status == CorrectionStatus.DONE
-    assert response.result is not None
-    assert response.result.overall_summary == "총평"
-
-
-def test_update_emphasis_points_request_schema():
-    """UpdateEmphasisPointsRequest 스키마 생성 테스트"""
-    request = UpdateEmphasisPointsRequest(emphasis_points="핵심 역량과 성과 지표를 강조")
-
-    assert request.emphasis_points == "핵심 역량과 성과 지표를 강조"
-
-
-def test_update_emphasis_points_request_allows_empty_string():
-    """강조 포인트는 선택 항목이라 빈 문자열을 허용한다."""
-    request = UpdateEmphasisPointsRequest(emphasis_points="")
-
-    assert request.emphasis_points == ""
-
-
-def test_update_company_insight_request_accepts_exactly_2000_chars():
-    """UpdateCompanyInsightRequest는 2000자까지 허용한다."""
-    request = UpdateCompanyInsightRequest(company_insight="가" * 2000)
-
-    assert len(request.company_insight) == 2000
-
-
-def test_update_company_insight_request_rejects_more_than_2000_chars():
-    """UpdateCompanyInsightRequest는 2001자를 거부한다."""
-    with pytest.raises(ValueError):
-        UpdateCompanyInsightRequest(company_insight="가" * 2001)
 
 
 def test_single_correction_line_comment_allows_null_for_keep():

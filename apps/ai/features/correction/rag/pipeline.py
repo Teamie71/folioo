@@ -109,22 +109,6 @@ class RAGPipeline:
             insight=insight,
         )
 
-    async def run_from_search_results(
-        self,
-        search_results: list[dict],
-        company_name: str,
-        job_title: str,
-        keywords: list[str] | None = None,
-    ) -> str:
-        """기존 검색 결과로 인사이트만 재생성"""
-        return await asyncio.to_thread(
-            self._generate_insight,
-            keywords=keywords,
-            search_results=search_results,
-            company_name=company_name,
-            job_title=job_title,
-        )
-
     def _extract_keywords(
         self, company_name: str, job_title: str, job_description: str
     ) -> list[str]:

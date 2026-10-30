@@ -1,20 +1,15 @@
 """PDF 추출 서비스"""
 
 import asyncio
-import json
 import logging
-from collections.abc import AsyncIterator
-from contextlib import aclosing
 from typing import TYPE_CHECKING, Protocol
 
 from fastapi import BackgroundTasks
 
 from common.clients.correction_client import (
     CorrectionClient,
-    build_pdf_activity_payload,
     get_correction_client,
 )
-from common.sse import SSEErrorCode, SSEEventType
 from common.utils.text import is_within_char_limit, truncate_to_char_limit
 
 from .config import get_pdf_extraction_limits
@@ -44,17 +39,6 @@ class PdfExtractionGeneratorProtocol(Protocol):
 
     def extract(self, file_bytes: bytes, filename: str) -> PdfExtractionResult:
         """PDF 파일을 구조화된 활동 목록으로 추출한다."""
-
-    def extract_stream(self, file_bytes: bytes, filename: str) -> AsyncIterator[PdfActivity]:
-        """PDF 파일을 활동 단위로 흘려보낸다."""
-
-
-def _sse_event(event_type: SSEEventType, payload: dict) -> dict:
-    """SSE 라우터가 기대하는 이벤트 dict 를 만든다."""
-    return {
-        "event": event_type,
-        "data": json.dumps({"type": event_type, **payload}, ensure_ascii=False),
-    }
 
 
 class PdfExtractionService:
@@ -112,112 +96,6 @@ class PdfExtractionService:
             return
 
         await self._send_completion_callback(correction_id, activities)
-
-    async def stream_extraction(
-        self,
-        correction_id: int,
-        file_bytes: bytes,
-        filename: str,
-        content_type: str | None,
-    ) -> AsyncIterator[dict]:
-        """PDF 추출을 활동 단위로 스트리밍하고, 끝나면 기존 배치 콜백을 전송한다.
-
-        저장 경로는 바꾸지 않는다. 메인 서버의 PDF 추출 결과 수신은 전부-아니면-전무
-        구조라 활동 단위 저장 경로가 없다. 그래서 스트림은 화면 표시용으로만 쓰고,
-        영속화는 스트림이 끝난 뒤 기존 `complete_pdf_extraction` 콜백 1회로 처리한다.
-
-        프론트가 중간에 연결을 끊어도 저장이 완료되도록, 콜백 전송은 스트림 소비와
-        분리해 태스크로 띄운다.
-
-        Args:
-            correction_id: 첨삭 ID
-            file_bytes: PDF 파일 바이트
-            filename: 원본 파일명
-            content_type: 업로드 content-type
-
-        Yields:
-            dict: `{"event": ..., "data": ...}` 형태의 SSE 이벤트
-        """
-        try:
-            self._validate_file(file_bytes=file_bytes, filename=filename, content_type=content_type)
-        except ValueError as exc:
-            await self._send_failure_callback(correction_id, str(exc))
-            yield _sse_event(
-                SSEEventType.EXTRACTION_FAILED,
-                {"error": {"code": SSEErrorCode.EXTRACTION_INVALID_FILE, "message": str(exc)}},
-            )
-            return
-
-        limits = get_pdf_extraction_limits()
-        seen_names: set[str] = set()
-        activities: list[PdfActivity] = []
-
-        yield _sse_event(SSEEventType.EXTRACTION_STARTED, {})
-
-        try:
-            # aclosing: 상한 도달로 break 하거나 예외로 빠져나가도 하위 LLM 스트림
-            # (extract_stream 이 감싸는 llm.astream)이 확실히 닫히도록 한다. async for
-            # 를 break 하는 것만으로는 비동기 제너레이터가 즉시 닫히지 않는다.
-            async with aclosing(self._generator.extract_stream(file_bytes, filename)) as stream:
-                async for raw_activity in stream:
-                    normalized = self._normalize_activity(raw_activity, seen_names)
-                    if normalized is None:
-                        continue
-
-                    activities.append(normalized)
-                    formatted = self._format_activities_for_callback([normalized])[0]
-                    yield _sse_event(
-                        SSEEventType.ACTIVITY_COMPLETED,
-                        {
-                            "index": len(activities) - 1,
-                            "activity": build_pdf_activity_payload(formatted),
-                        },
-                    )
-
-                    if len(activities) >= limits.max_activity_count:
-                        break
-        except Exception as exc:
-            logger.exception("PDF 추출 스트리밍 실패 (correction_id: %s): %s", correction_id, exc)
-            await self._send_failure_callback(correction_id, str(exc))
-            yield _sse_event(
-                SSEEventType.EXTRACTION_FAILED,
-                {"error": {"code": SSEErrorCode.EXTRACTION_FAILED, "message": str(exc)}},
-            )
-            return
-
-        if not activities:
-            message = "PDF에서 추출된 활동이 없습니다."
-            logger.error("PDF 추출 스트리밍 결과 없음 (correction_id: %s)", correction_id)
-            await self._send_failure_callback(correction_id, message)
-            yield _sse_event(
-                SSEEventType.EXTRACTION_FAILED,
-                {"error": {"code": SSEErrorCode.EXTRACTION_FAILED, "message": message}},
-            )
-            return
-
-        completion_task = asyncio.create_task(
-            self._send_completion_callback(correction_id, activities)
-        )
-        # asyncio.shield: 소비 측(클라이언트 연결 끊김 등)에서 이 지점의 await가
-        # 취소돼도 completion_task 자체는 취소되지 않고 백그라운드에서 계속 실행된다.
-        # (common/sse/ping.py 의 finally 블록이 next_event_task 를 취소하면 그 취소가
-        # 이 await 체인까지 전파되는데, shield 없이는 completion_task 까지 함께
-        # 취소되어 저장이 중간에 끊긴다.)
-        completed = await asyncio.shield(completion_task)
-
-        if not completed:
-            message = "PDF 추출 결과 저장에 실패했습니다."
-            await self._send_failure_callback(correction_id, message)
-            yield _sse_event(
-                SSEEventType.EXTRACTION_FAILED,
-                {"error": {"code": SSEErrorCode.EXTRACTION_FAILED, "message": message}},
-            )
-            return
-
-        yield _sse_event(
-            SSEEventType.EXTRACTION_COMPLETED,
-            {"activityCount": len(activities)},
-        )
 
     async def _send_completion_callback(
         self,

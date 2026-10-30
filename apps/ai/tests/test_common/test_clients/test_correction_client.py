@@ -150,3 +150,74 @@ async def test_fail_pdf_extraction_sends_error_message_payload():
             )
     finally:
         await client.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("client_type", "method", "args", "http_method", "path", "payload"),
+    [
+        ("correction", "get_correction", (123,), "GET", "/corrections/123", None),
+        ("correction", "get_rag_data", (123,), "GET", "/corrections/123/rag-data", None),
+        (
+            "correction",
+            "save_rag_data",
+            (123, "query", {"results": []}),
+            "POST",
+            "/corrections/123/rag-data",
+            {"searchQuery": "query", "searchResults": {"results": []}},
+        ),
+        (
+            "correction",
+            "update_status",
+            (123, "GENERATING"),
+            "PATCH",
+            "/corrections/123/status",
+            {"status": "GENERATING"},
+        ),
+        (
+            "correction",
+            "update_company_insight",
+            (123, "insight"),
+            "PATCH",
+            "/corrections/123/company-insight",
+            {"companyInsight": "insight"},
+        ),
+        (
+            "correction",
+            "update_result",
+            (123, [], "review"),
+            "PATCH",
+            "/corrections/123/result",
+            {"result": [], "overallReview": "review"},
+        ),
+        ("portfolio", "get_portfolio", (123,), "GET", "/internal/portfolios/123", None),
+    ],
+)
+async def test_backend_contracts_remain_available(
+    client_type, method, args, http_method, path, payload
+):
+    """미사용 진입점 제거 후에도 실제 클라이언트의 조회·저장·인증 계약을 유지한다."""
+    import json
+
+    import httpx
+
+    from common.clients.portfolio_client import PortfolioClient
+
+    factory = CorrectionClient if client_type == "correction" else PortfolioClient
+    client = factory(base_url="https://example.com", api_key="test-key")
+
+    async def respond(request, **kwargs):
+        assert request.method == http_method
+        assert request.url.path == path
+        assert request.headers["X-API-Key"] == "test-key"
+        if payload is not None:
+            assert json.loads(request.content) == payload
+        return httpx.Response(200, json={"result": {"id": 123}}, request=request)
+
+    try:
+        with patch.object(client._client, "send", side_effect=respond) as send:
+            result = await getattr(client, method)(*args)
+            assert result is not None
+            send.assert_awaited_once()
+    finally:
+        await client.close()

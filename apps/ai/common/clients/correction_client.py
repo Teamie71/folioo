@@ -162,19 +162,6 @@ class CorrectionClient(BaseClient):
             json={"result": result, "overallReview": overall_review},
         )
 
-    async def update_emphasis_points(self, correction_id: int, emphasis_points: str) -> dict:
-        """
-        강조 포인트 수정
-
-        Args:
-            correction_id: 첨삭 ID
-            emphasis_points: 강조 포인트 텍스트
-        """
-        return await self.patch(
-            f"{self._PREFIX}/{correction_id}/emphasis-points",
-            json={"highlightPoint": emphasis_points},
-        )
-
     async def complete_pdf_extraction(
         self,
         correction_id: int,
@@ -220,15 +207,6 @@ class CorrectionClient(BaseClient):
                 "errorMessage": error_message,
             },
         )
-
-    async def delete_correction(self, correction_id: int) -> None:
-        """
-        첨삭 삭제
-
-        Args:
-            correction_id: 첨삭 ID
-        """
-        await self.delete(f"{self._PREFIX}/{correction_id}")
 
 
 def get_correction_client() -> "CorrectionClient":
