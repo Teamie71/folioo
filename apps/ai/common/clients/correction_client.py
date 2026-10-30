@@ -21,8 +21,7 @@ def _as_payload_dict(value: Any) -> dict[str, Any]:
 def build_problem_solving_payload(item: Any) -> dict[str, Any]:
     """문제 해결 항목을 callback payload 형식으로 변환
 
-    PDF 추출의 SSE payload(`activity_completed`)와 메인 서버 콜백 payload가
-    같은 모양을 쓰도록 공유한다.
+    PDF 추출 결과를 메인 서버 콜백의 camelCase 계약에 맞춘다.
     """
     data = _as_payload_dict(item)
     return {
@@ -36,8 +35,7 @@ def build_problem_solving_payload(item: Any) -> dict[str, Any]:
 def build_pdf_activity_payload(activity: Any) -> dict[str, Any]:
     """PDF 활동 스키마를 callback payload 형식으로 변환
 
-    PDF 추출의 SSE payload(`activity_completed`)와 메인 서버 콜백 payload가
-    같은 모양을 쓰도록 공유한다.
+    PDF 추출 결과를 메인 서버 콜백의 camelCase 계약에 맞춘다.
     """
     data = _as_payload_dict(activity)
     problem_solving = data.get("problem_solving", data.get("problemSolving", []))
@@ -162,19 +160,6 @@ class CorrectionClient(BaseClient):
             json={"result": result, "overallReview": overall_review},
         )
 
-    async def update_emphasis_points(self, correction_id: int, emphasis_points: str) -> dict:
-        """
-        강조 포인트 수정
-
-        Args:
-            correction_id: 첨삭 ID
-            emphasis_points: 강조 포인트 텍스트
-        """
-        return await self.patch(
-            f"{self._PREFIX}/{correction_id}/emphasis-points",
-            json={"highlightPoint": emphasis_points},
-        )
-
     async def complete_pdf_extraction(
         self,
         correction_id: int,
@@ -220,15 +205,6 @@ class CorrectionClient(BaseClient):
                 "errorMessage": error_message,
             },
         )
-
-    async def delete_correction(self, correction_id: int) -> None:
-        """
-        첨삭 삭제
-
-        Args:
-            correction_id: 첨삭 ID
-        """
-        await self.delete(f"{self._PREFIX}/{correction_id}")
 
 
 def get_correction_client() -> "CorrectionClient":

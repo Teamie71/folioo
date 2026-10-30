@@ -46,7 +46,7 @@ class ColorFormatter(logging.Formatter):
     uvicorn 스타일 컬러 로그 포매터
 
     출력 형식:
-      INFO:     features.interview.service - 메시지 내용
+      INFO:     features.experience_map.service - 메시지 내용
     (레벨 색상) (마젠타 로거명)            (기본색 메시지)
     """
 

@@ -6,6 +6,8 @@
 import asyncio
 import uuid
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
@@ -17,12 +19,14 @@ from app.schemas.experience_map import (
     NodeStatusEvent,
 )
 from features.experience_map.errors import (
+    RequestCancelledError,
     RequestNotFoundError,
     RetryExpiredError,
     RetryNotAllowedError,
     SessionBusyError,
 )
 from features.experience_map.graph_runner import MockGraphRunner
+from features.experience_map.main_client import ExperienceMapMainClient
 from features.experience_map.prompts.router import build_gap_context
 from features.experience_map.repository import ExperienceMapRepository
 from features.experience_map.service import ExperienceMapService, _build_state
@@ -34,6 +38,18 @@ HASH_A = "a" * 64
 
 def new_request_id() -> str:
     return str(uuid.uuid4())
+
+
+@pytest.fixture(autouse=True)
+def failed_usage_report(monkeypatch):
+    """실패 보고가 로컬 .env 설정에 따라 실제 메인 서버를 호출하지 않게 한다.
+
+    이 모듈은 실제 DB와 모의 그래프로 서비스 동작을 검증한다.
+    HTTP 계약은 test_main_client.py에서 별도로 확인한다.
+    """
+    report = AsyncMock()
+    monkeypatch.setattr(ExperienceMapMainClient, "report_failed_usage", report)
+    return report
 
 
 @pytest_asyncio.fixture
@@ -294,12 +310,16 @@ async def test_turn_keeps_running_after_client_disconnects(repo, user_id, monkey
 
 
 @pytest.mark.asyncio
-async def test_cancel_request_interrupts_running_stream(repo, user_id):
+async def test_cancel_request_interrupts_running_stream(
+    repo, user_id, monkeypatch, failed_usage_report
+):
     """작업 중지 API(2026-09-20)로 세운 플래그가 실행 중인 스트림을 끊는다.
 
     `test_lease_loss_interrupts_during_silence`와 같은 방식이다 — 조용한
     구간(파일처리·LLM 호출)에서도 다음 lease 갱신 주기에 끊겨야 한다.
     """
+    monkeypatch.setenv("MAIN_BACKEND_URL", "https://backend.example.test")
+    monkeypatch.setenv("MAIN_BACKEND_API_KEY", "test-key")
     service = ExperienceMapService(
         repository=repo, runner=_SlowRunner(gap_seconds=5), lease_renew_interval=0.1
     )
@@ -329,6 +349,7 @@ async def test_cancel_request_interrupts_running_stream(repo, user_id):
     assert events[-1]["type"] == "error"
     assert events[-1]["error"]["code"] == "cancelled"
     assert events[-1]["error"]["retryable"] is False
+    failed_usage_report.assert_awaited_once_with(user_id=user_id, request_id=request_id)
 
     stored = await repo.get_request(user_id, request_id)
     assert stored.status == "failed"
@@ -714,3 +735,28 @@ async def test_lost_lease_does_not_save_message(service, repo, user_id):
     assert types[-1] == "error"
     rows, _ = await repo.list_messages(user_id, session.session_id, cursor=None, limit=50)
     assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_failure_reporting_is_isolated_from_backend_settings(
+    monkeypatch, failed_usage_report
+):
+    """백엔드 설정이 있어도 실패 저장·보고가 실제 HTTP 요청 없이 완료된다."""
+    monkeypatch.setenv("MAIN_BACKEND_URL", "https://backend.example.test")
+    monkeypatch.setenv("MAIN_BACKEND_API_KEY", "test-key")
+    repository = SimpleNamespace(mark_request_failed=AsyncMock(return_value=object()))
+    service = ExperienceMapService(repository=repository)
+    save_message = AsyncMock()
+    monkeypatch.setattr(service, "_save_message", save_message)
+    prepared = SimpleNamespace(
+        user_id="9000001", request_id=new_request_id(), owner_token="owner", channel="WEB"
+    )
+
+    event = await service._fail(prepared, RequestCancelledError())
+
+    assert event.model_dump()["error"]["code"] == "cancelled"
+    repository.mark_request_failed.assert_awaited_once()
+    save_message.assert_awaited_once()
+    failed_usage_report.assert_awaited_once_with(
+        user_id=prepared.user_id, request_id=prepared.request_id
+    )

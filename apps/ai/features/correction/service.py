@@ -55,11 +55,6 @@ def _to_upper_status(status: CorrectionStatus) -> str:
     return status.value.upper()
 
 
-def _normalize_status(raw: str | None) -> str:
-    """메인 서버 응답의 상태값을 내부 CorrectionStatus.value(lower_case)로 정규화"""
-    return raw.lower() if raw else ""
-
-
 class CorrectionService:
     """
     첨삭 생성 전 과정을 조율하는 서비스
@@ -136,71 +131,6 @@ class CorrectionService:
                 logger.exception("RAG 인사이트 생성 실패 (correction_id: %s)", correction_id)
             else:
                 logger.exception("RAG 처리 실패 (correction_id: %s)", correction_id)
-            await self._mark_failed(correction_id)
-
-    # ------------------------------------------------------------------
-    # RAG 데이터 파싱 유틸리티
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _extract_search_results(rag_data: dict) -> list[dict]:
-        """rag_data에서 검색 결과 목록 추출"""
-        stored = rag_data.get("searchResults")
-
-        if isinstance(stored, dict):
-            results = stored.get("results")
-            if isinstance(results, list):
-                return [item for item in results if isinstance(item, dict)]
-            return []
-
-        if isinstance(stored, list):
-            return [item for item in stored if isinstance(item, dict)]
-
-        return []
-
-    @staticmethod
-    def _extract_keywords(rag_data: dict) -> list[str]:
-        """rag_data에서 키워드 목록 추출"""
-        stored = rag_data.get("searchResults")
-        if isinstance(stored, dict):
-            keywords = stored.get("keywords")
-            if isinstance(keywords, list):
-                normalized: list[str] = []
-                for item in keywords:
-                    keyword = str(item).strip()
-                    if keyword:
-                        normalized.append(keyword)
-                if normalized:
-                    return normalized
-
-        search_query = rag_data.get("searchQuery")
-        if isinstance(search_query, str):
-            return [keyword.strip() for keyword in search_query.split(",") if keyword.strip()]
-
-        return []
-
-    async def _run_rag_from_search_results(
-        self,
-        correction_id: int,
-        search_results: list[dict],
-        keywords: list[str],
-    ) -> None:
-        """저장된 RAG 검색 결과로 인사이트만 재생성"""
-        try:
-            correction = await self._correction_client.get_correction(correction_id)
-
-            insight = await self._rag_pipeline.run_from_search_results(
-                search_results=search_results,
-                company_name=correction["companyName"],
-                job_title=correction["positionName"],
-                keywords=keywords,
-            )
-            await self._correction_client.update_company_insight(correction_id, insight)
-        except Exception:
-            logger.exception(
-                "저장된 검색 결과 기반 RAG 재시도 실패 (correction_id: %s)",
-                correction_id,
-            )
             await self._mark_failed(correction_id)
 
     # ------------------------------------------------------------------
@@ -435,60 +365,6 @@ class CorrectionService:
             converted_results.append(converted_portfolio)
 
         return converted_results
-
-    # ------------------------------------------------------------------
-    # 재시도
-    # ------------------------------------------------------------------
-
-    async def retry(self, correction_id: int, background_tasks: BackgroundTasks) -> None:
-        """
-        실패한 첨삭을 재시도한다.
-
-        company_insight 유무와 rag_data 유무에 따라 재시도 경로를 결정:
-        - company_insight + rag_data 있음 -> 생성부터 재시도
-        - rag_data만 있음 (검색 결과 존재) -> 저장된 검색 결과로 인사이트 재생성
-        - 그 외 -> 전체 RAG부터 재시도
-        """
-        correction = await self._correction_client.get_correction(correction_id)
-        status_value = _normalize_status(correction.get("status", ""))
-
-        if status_value != CorrectionStatus.FAILED.value:
-            raise ValueError("실패 상태가 아닌 첨삭은 재시도할 수 없습니다.")
-
-        company_insight = correction.get("companyInsight")
-
-        # 1) company_insight + rag_data 모두 있으면 생성부터 재시도
-        if company_insight:
-            rag_data = await self._correction_client.get_rag_data(correction_id)
-            if rag_data:
-                await self._correction_client.update_status(
-                    correction_id, _to_upper_status(CorrectionStatus.GENERATING)
-                )
-                background_tasks.add_task(self._run_generation, correction_id)
-                return
-
-        # 2) 저장된 RAG 데이터가 있으면 검색 결과로 인사이트만 재생성
-        rag_data = await self._correction_client.get_rag_data(correction_id)
-        if rag_data:
-            search_results = self._extract_search_results(rag_data)
-            if search_results:
-                keywords = self._extract_keywords(rag_data)
-                await self._correction_client.update_status(
-                    correction_id, _to_upper_status(CorrectionStatus.DOING_RAG)
-                )
-                background_tasks.add_task(
-                    self._run_rag_from_search_results,
-                    correction_id,
-                    search_results,
-                    keywords,
-                )
-                return
-
-        # 3) 전체 RAG부터 재시도
-        await self._correction_client.update_status(
-            correction_id, _to_upper_status(CorrectionStatus.DOING_RAG)
-        )
-        background_tasks.add_task(self._run_rag, correction_id)
 
     # ------------------------------------------------------------------
     # 공통 유틸리티

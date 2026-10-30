@@ -245,32 +245,6 @@ async def test_run_returns_generated_result(monkeypatch, mock_tavily_client):
 
 
 @pytest.mark.asyncio
-async def test_run_from_search_results_generates_insight_without_new_search(
-    monkeypatch,
-    mock_tavily_client,
-):
-    """run_from_search_results는 저장된 검색 결과로 인사이트만 생성한다."""
-    from features.correction.rag import pipeline
-
-    dummy_llm = _DummyLLM(["재생성된 인사이트"])
-    monkeypatch.setattr(pipeline, "get_llm", lambda: dummy_llm)
-    dummy_tavily_client = mock_tavily_client(response_builder=lambda *_args: {"results": []})
-    rag_pipeline = RAGPipeline()
-
-    insight = await rag_pipeline.run_from_search_results(
-        search_results=[{"title": "기존 검색", "content": "본문", "url": "https://example.com"}],
-        company_name="네이버",
-        job_title="백엔드",
-        keywords=["재시도 키워드1", "재시도 키워드2"],
-    )
-
-    assert insight == "재생성된 인사이트"
-    assert "검색 키워드" in dummy_llm.prompts[0]
-    assert "재시도 키워드1" in dummy_llm.prompts[0]
-    assert dummy_tavily_client.calls == []
-
-
-@pytest.mark.asyncio
 async def test_search_raises_when_tavily_api_key_missing(monkeypatch, mock_tavily_client):
     """Tavily API 키가 없으면 검색 예외로 래핑해 전파한다."""
     from features.correction.rag import pipeline

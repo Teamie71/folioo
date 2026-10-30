@@ -20,12 +20,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen --no-dev
+RUN python -c "import pypdfium2 as pdfium; pdf = pdfium.PdfDocument.new(); page = pdf.new_page(2, 2); assert page.render().to_pil().size == (2, 2)"
 
 COPY app/ ./app/
 COPY common/ ./common/
 COPY features/correction/ ./features/correction/
 COPY features/experience_map/ ./features/experience_map/
-COPY features/interview/ ./features/interview/
 COPY features/portfolio/ ./features/portfolio/
 COPY main.py ./
 

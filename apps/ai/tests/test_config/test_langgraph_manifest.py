@@ -18,9 +18,9 @@ def _graphs() -> dict[str, str]:
     return json.loads(MANIFEST.read_text(encoding="utf-8"))["graphs"]
 
 
-def test_manifest_registers_both_agents():
-    """인터뷰와 경험정리 그래프가 모두 등록돼 있다."""
-    assert set(_graphs()) == {"interview-agent", "experience-map-agent"}
+def test_manifest_registers_experience_map_agent():
+    """유지하는 경험정리 그래프만 등록돼 있다."""
+    assert set(_graphs()) == {"experience-map-agent"}
 
 
 @pytest.mark.parametrize("name", sorted(_graphs()))

@@ -109,8 +109,6 @@ async def test_lifespan_initializes_and_closes_http_client(monkeypatch):
     import common.clients.portfolio_client as portfolio_client_module
     import common.db.connection as db_connection
     import common.http_client as http_client
-    import features.interview.agents.insight_store as insight_store_module
-    import features.interview.agents.nodes.retriever as retriever_module
 
     class _DummyClient:
         async def close(self):
@@ -134,15 +132,11 @@ async def test_lifespan_initializes_and_closes_http_client(monkeypatch):
     monkeypatch.setattr(correction_client_module, "reset_correction_client", lambda: None)
     monkeypatch.setattr(portfolio_client_module, "init_portfolio_client", lambda: _DummyClient())
     monkeypatch.setattr(portfolio_client_module, "reset_portfolio_client", lambda: None)
-    init_insight_store_mock = MagicMock()
-    monkeypatch.setattr(insight_store_module, "MainServerInsightStore", lambda: object())
-    monkeypatch.setattr(retriever_module, "init_insight_store", init_insight_store_mock)
 
     async with main.lifespan(FastAPI()):
         pass
 
     get_http_client_mock.assert_called_once()
-    init_insight_store_mock.assert_called_once()
     close_http_client_mock.assert_awaited_once()
     create_pool_mock.assert_awaited_once()
     close_pool_mock.assert_awaited_once()
@@ -162,8 +156,6 @@ async def test_lifespan_swaps_upload_store_for_test_ui(
     import common.clients.portfolio_client as portfolio_client_module
     import common.db.connection as db_connection
     import common.http_client as http_client
-    import features.interview.agents.insight_store as insight_store_module
-    import features.interview.agents.nodes.retriever as retriever_module
     from features.experience_map.test_runtime import InMemoryObjectStore
     from features.experience_map.upload_store import get_upload_store
 
@@ -192,8 +184,6 @@ async def test_lifespan_swaps_upload_store_for_test_ui(
     monkeypatch.delenv("MAIN_BACKEND_URL", raising=False)
     monkeypatch.setattr(correction_client_module, "reset_correction_client", lambda: None)
     monkeypatch.setattr(portfolio_client_module, "reset_portfolio_client", lambda: None)
-    monkeypatch.setattr(insight_store_module, "MainServerInsightStore", lambda: object())
-    monkeypatch.setattr(retriever_module, "init_insight_store", MagicMock())
 
     async with main.lifespan(FastAPI()):
         store = get_upload_store()
@@ -232,8 +222,6 @@ async def test_lifespan_continues_when_experience_map_db_missing(monkeypatch):
     import common.clients.portfolio_client as portfolio_client_module
     import common.db.connection as db_connection
     import common.http_client as http_client
-    import features.interview.agents.insight_store as insight_store_module
-    import features.interview.agents.nodes.retriever as retriever_module
 
     async def _raise_value_error():
         raise ValueError("DATABASE_URL 환경변수가 설정되지 않았습니다.")
@@ -252,8 +240,6 @@ async def test_lifespan_continues_when_experience_map_db_missing(monkeypatch):
     monkeypatch.delenv("MAIN_BACKEND_URL", raising=False)
     monkeypatch.setattr(correction_client_module, "reset_correction_client", lambda: None)
     monkeypatch.setattr(portfolio_client_module, "reset_portfolio_client", lambda: None)
-    monkeypatch.setattr(insight_store_module, "MainServerInsightStore", lambda: object())
-    monkeypatch.setattr(retriever_module, "init_insight_store", MagicMock())
 
     async with main.lifespan(FastAPI()):
         pass

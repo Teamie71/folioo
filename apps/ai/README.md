@@ -1,15 +1,27 @@
 # Folioo AI
 
-Folioo AI는 사용자의 프로젝트 경험을 인터뷰로 구조화하고, 포트폴리오 문장 생성과 첨삭 보조를 제공하는 AI 백엔드입니다. FastAPI API 서버와 LangGraph 기반 인터뷰 에이전트를 중심으로 동작하며, 메인 NestJS 백엔드와 연동됩니다.
+수정자: 최진혁
+
+최근 수정일: 2026-10-30
+
+## 수정 이력
+
+| 날짜 | 수정자 | 수정 내용 |
+|---|---|---|
+| 2026-10-30 | 최진혁 | AI 이관 후 문서 정리·현행 안내 반영 |
+
+> 기준일: 2026-10-30
+
+Folioo AI는 대화와 파일 입력으로 경험맵을 정리하고, 포트폴리오 첨삭·RAG·PDF 추출을 제공하는 AI 백엔드입니다. FastAPI와 LangGraph를 사용하며 메인 NestJS 백엔드와 연동됩니다.
 
 ## 주요 기능
 
-- 인터뷰 세션 생성, 상태 조회, 단계별 대화 진행
-- SSE 기반 AI 응답 토큰 스트리밍
-- PDF/이미지 업로드를 포함한 인터뷰 답변 처리
-- 인터뷰 완료 후 포트폴리오 결과 생성
-- 자기소개서/포트폴리오 첨삭 RAG 및 기업 분석 보조
-- PostgreSQL checkpointer 기반 LangGraph 세션 상태 저장
+- 경험맵 세션 생성·대화·메시지·상태 조회·취소·재시도
+- SSE 기반 경험맵 처리 결과 전달
+- PDF·이미지·DOCX·PPTX 입력 처리
+- 카카오 대화와 경험맵 연동
+- 포트폴리오 첨삭·RAG·PDF 추출
+- PostgreSQL checkpointer 기반 LangGraph 상태 저장
 
 ## 기술 스택
 
@@ -42,7 +54,15 @@ Bash에서는 활성화 명령을 `eval "$(mise activate bash)"`로 바꿉니다
 셸을 활성화하지 않으면 각 명령 앞에 `mise exec --`를 붙입니다.
 
 `apps/ai/.env.example`을 참고해 `apps/ai/.env`와 개발 DB를 준비한 뒤 실행합니다.
-로컬 DB 준비는 [기존 개발 안내](docs/architecture/experience-map-local-dev.md)를 참고하세요.
+로컬 PostgreSQL은 다음 명령으로 초기화합니다. 개발용 경험맵 DB와 checkpoint DB가 생성됩니다.
+
+```bash
+uv run --locked --project apps/ai --group local-db python apps/ai/scripts/experience_map/local_db.py init
+```
+
+출력된 `DATABASE_URL`·`CHECKPOINT_DATABASE_URL`을 `.env`에 설정하고 두 DB는 분리합니다.
+클러스터는 Git에서 제외된 `apps/ai/.local/pgdata/`에 저장됩니다. 관리 명령은
+위 명령의 `init`을 `start`·`stop`·`status`·`psql expmap`·`psql checkpoint`로 바꿔 사용합니다.
 
 ```bash
 pnpm run ai:dev
@@ -74,6 +94,9 @@ AI 서버는 `ai:dev`로 따로 실행합니다. 공통 `pnpm dev`에는 포함�
 | `pnpm run check:all` | 공통 검사와 AI 린트·포맷·전체 테스트 |
 
 테스트에는 서버용 DB와 분리한 `folioo_ai_test`를 먼저 생성합니다.
+로컬 도구의 `psql postgres`로 접속한 뒤 `CREATE DATABASE folioo_ai_test;`를 실행하고
+`\q`로 나옵니다. 이미 DB가 있다면 생성은 생략합니다.
+테스트 fixture는 스키마를 준비하고 사용자 ID 900만 이상인 테스트 행을 정리합니다.
 
 ```bash
 EXPMAP_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55432/folioo_ai_test OPENROUTER_API_KEY=ci-dummy-key pnpm run ai:check
@@ -96,7 +119,7 @@ LangGraph Studio는 `apps/ai`에서 `uv run --locked langgraph dev`로 실행합
 | `PDF_EXTRACTION_MODEL_NAME` | PDF 추출용 LLM 모델명 |
 | `FILE_PROCESSOR_MODEL_NAME` | 업로드 파일 처리용 LLM 모델명 |
 | `DATABASE_URL` | 기본 PostgreSQL 연결 문자열 |
-| `CHECKPOINT_DATABASE_URL` | LangGraph checkpointer 전용 PostgreSQL 연결 문자열. 미설정 시 `DATABASE_URL` 재사용 |
+| `CHECKPOINT_DATABASE_URL` | LangGraph checkpointer 전용 PostgreSQL 연결 문자열. 기본 DB와 분리해 설정하며, 미설정 시 checkpointer 초기화 실패 |
 | `AI_SERVICE_API_KEY` | 메인 백엔드가 AI 서버 호출 시 사용하는 API 키 |
 | `MAIN_BACKEND_URL` | 메인 NestJS 백엔드 URL |
 | `MAIN_BACKEND_API_KEY` | AI 서버가 메인 백엔드 호출 시 사용하는 API 키 |
@@ -105,18 +128,41 @@ LangGraph Studio는 `apps/ai`에서 `uv run --locked langgraph dev`로 실행합
 
 ## API 문서
 
+첨삭은 메인 서버가 호출하는 다음 세 경로를 제공합니다.
+
+- `POST /api/v1/corrections/{correction_id}/rag`
+- `POST /api/v1/corrections/{correction_id}/generate`
+- `POST /api/v1/corrections/{correction_id}/pdf-extraction`
+
+첨삭 입력·포트폴리오 원문 조회와 결과·상태 저장은 `MAIN_BACKEND_URL`의 내부 API를 사용합니다.
+사용자용 조회·수정·삭제·재시도는 메인 서버가 담당합니다.
+
 서버 실행 후 다음 경로에서 OpenAPI 문서를 확인할 수 있습니다.
 
 - Swagger UI: `/docs`
 - ReDoc: `/redoc`
 - Health check: `/health`
 
-## 아키텍처 문서
+## 경험맵 로컬 확인
 
-- `docs/architecture/sse-streaming.md`: 인터뷰 SSE 스트리밍 이벤트 프로토콜
-- `docs/architecture/worker-runtime.md`: 시각화 워커 실행 환경과 큐 핸들러 패턴
-- `docs/architecture/worker-spec.md`: 시각화 워커 사양과 인프라 구조
-- `docs/architecture/template-system.md`: PPTX 템플릿 시스템
-- `docs/architecture/ooxml-editing.md`: OOXML 편집 방식
-- `docs/architecture/qa-and-guardrails.md`: QA 및 가드레일
-- `docs/adr/`: 주요 아키텍처 의사결정 기록
+외부 LLM·DB·백엔드 없이 그래프 흐름만 확인하는 데모입니다.
+
+```bash
+uv run --locked --project apps/ai python apps/ai/scripts/experience_map/demo.py
+```
+
+`EXPERIENCE_MAP_TEST_UI_ENABLED=true`는 경험맵의 맵·커밋·업로드를 메모리 실행기로 바꿉니다.
+메모리 데이터는 재시작하면 사라지고, DB의 세션·요청 기록과는 별개입니다.
+실제 백엔드·GCS 연동 검증 시에는 `false`로 설정합니다.
+카카오의 `KAKAO_WEB_EXPERIENCE_URL`은 사용자가 이동할 실제 프론트 경험맵의 HTTPS 주소입니다.
+데모·테스트 UI 성공은 실제 저장 연동 성공을 뜻하지 않습니다.
+
+## API 계약·배포 안내
+
+- [현재 AI API 전체 목록·기능](docs/architecture/api-reference.md)
+
+- [이관 후 API·전용 코드 정리 내역](docs/architecture/api-cleanup.md)
+
+- [경험맵 API·SSE 계약](docs/architecture/experience-map-api-spec.md)
+- [첨삭·RAG·PDF 추출 계약](docs/architecture/correction-api.md)
+- [AI 서버 배포 안내](deploy/main-server/README.md)
