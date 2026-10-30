@@ -5,7 +5,7 @@ import process from 'node:process';
 
 const require = createRequire(import.meta.url);
 const webDirectory = new URL('../', import.meta.url);
-const generatedDirectory = new URL('src/assets/icons/generated/', webDirectory);
+const generatedDirectory = new URL('src/components/icons/', webDirectory);
 
 rmSync(generatedDirectory, { recursive: true, force: true });
 
@@ -16,9 +16,9 @@ execFileSync(
     '--config-file',
     '.svgrrc.json',
     '--out-dir',
-    'src/assets/icons/generated',
+    'src/components/icons',
     '--',
-    'src/assets/icons/svg',
+    'public/icons',
   ],
   { cwd: webDirectory, stdio: 'inherit' },
 );

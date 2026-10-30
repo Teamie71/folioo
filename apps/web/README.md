@@ -80,30 +80,34 @@ Turbo 캐시가 적중하면 명령을 다시 실행하지 않고 이전 로그�
 아이콘은 웹 앱 내부에서 SVG 원본으로 관리하고, 수동 명령으로 SVGR CLI를 실행하여 React 컴포넌트를 생성합니다.
 
 ```text
-src/assets/icons/
-├── svg/          # 직접 관리하는 SVG 원본
-├── generated/    # 수동 명령으로 생성한 TSX 컴포넌트와 index.ts
-└── index.ts      # 웹 내부에서 사용하는 공개 진입점
+apps/web/
+├── public/icons/                # 직접 관리하는 SVG 원본
+└── src/components/icons/        # 아래 파일은 모두 수동 명령으로 생성
+    ├── KakaoIcon.tsx
+    ├── NaverIcon.tsx
+    ├── PlusIcon.tsx
+    └── index.ts                 # 개별 아이콘을 바로 export하는 진입점
 ```
 
 아이콘을 추가·수정·삭제하거나 파일명을 변경한 경우 다음 순서로 반영합니다.
 
-1. `src/assets/icons/svg/`의 SVG 원본을 변경합니다.
+1. `public/icons/`의 SVG 원본을 변경합니다.
 2. 아래 명령으로 TSX 컴포넌트와 export 목록을 생성합니다.
-3. `@/assets/icons`에서 필요한 아이콘을 가져와 사용하고, 변경 결과를 확인합니다.
-4. SVG 원본과 `generated/`의 변경 사항을 함께 커밋합니다.
+3. `@/components/icons`에서 필요한 아이콘을 가져와 사용하고, 변경 결과를 확인합니다.
+4. SVG 원본과 `src/components/icons/`의 변경 사항을 함께 커밋합니다.
 
 ```sh
 mise exec -- pnpm --filter @folioo/web generate:icons
 ```
 
 `dev`·`build`·`check-types` 및 CI에서는 아이콘을 다시 생성하지 않고, 커밋된 TSX 파일을 사용합니다.
-생성 스크립트는 기존 `generated/`를 정리하고 다시 생성하므로, 삭제하거나 이름을 변경한 아이콘의 이전 파일이 남지 않습니다.
-`generated/`는 Git 관리 대상이며 직접 수정하지 않습니다. 포맷·린트 대상에서는 제외하고 타입 검사는 수행합니다.
+생성 스크립트는 기존 `src/components/icons/` 전체를 정리하고 다시 생성하므로, 삭제하거나 이름을 변경한 아이콘의 이전 파일이 남지 않습니다.
+이 폴더는 생성 파일 전용이며, `index.ts`를 포함해 직접 작성한 코드를 두거나 수정하지 않습니다.
+생성 파일은 Git 관리 대상입니다. 포맷·린트 대상에서는 제외하고 타입 검사는 수행합니다.
 SVG 원본 변경을 감지하는 별도 watch 기능은 없습니다.
 
 ```tsx
-import { KakaoIcon } from '@/assets/icons';
+import { KakaoIcon } from '@/components/icons';
 import { Icon } from '@/components/ui/icon';
 
 <Icon svg={<KakaoIcon />} size={20} />;

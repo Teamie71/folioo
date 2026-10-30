@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { KakaoIcon, NaverIcon } from '@/assets/icons';
+import { KakaoIcon, NaverIcon } from '@/components/icons';
 import { Button } from '../button';
 import { PrefixIcon } from '../icon';
 import { socialLoginButton } from './social-login-button.css';
