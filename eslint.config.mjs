@@ -15,6 +15,7 @@ export default defineConfig(
     'apps/web/**',
     'packages/bud/tokens/src/tokens/**',
     'packages/bud/tokens/scripts/generate-tokens.mjs',
+    'packages/bud/icons/src/generated/**',
   ]),
   {
     files: ['**/*.{js,mjs,cjs}'],
