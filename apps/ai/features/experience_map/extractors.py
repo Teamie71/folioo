@@ -85,12 +85,8 @@ def _extract_text_plain(data: bytes) -> str:
 def _require_valid_zip(data: bytes) -> None:
     """DOCX·PPTX 가 온전한 zip 컨테이너인지 확인한다.
 
-    **markitdown 은 손상된 zip 에 예외를 던지지 않는다.** 바이트를 평문으로
-    해석해 깨진 글자(`偋̄扲潫敮`)를 돌려준다. 그대로 두면 그 쓰레기가 LLM 까지
-    흘러가 사용자 경험 정리에 들어간다.
-
-    업로드 검증(3.07)은 첫 4바이트 signature 만 본다. 여기서 컨테이너 전체를
-    확인한다.
+    업로드 단계의 파일 signature 검사에 더해 컨테이너 전체의 무결성을 확인한다.
+    손상된 문서를 LLM 입력으로 전달하지 않도록 실제 파싱 전에 거절한다.
     """
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as archive:

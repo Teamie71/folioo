@@ -115,7 +115,7 @@ async def _ensure_schema(pool: asyncpg.Pool) -> str | None:
     if missing:
         _schema_state = (
             f"경험정리 테이블이 없습니다: {', '.join(missing)}. "
-            "docs/architecture/experience-map-local-dev.md 를 참고해 스키마를 만드세요."
+            "apps/ai/README.md의 테스트 DB 안내와 scripts/experience_map/schema.sql을 확인하세요."
         )
         return _schema_state
 

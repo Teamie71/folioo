@@ -21,8 +21,7 @@ def _as_payload_dict(value: Any) -> dict[str, Any]:
 def build_problem_solving_payload(item: Any) -> dict[str, Any]:
     """문제 해결 항목을 callback payload 형식으로 변환
 
-    PDF 추출의 SSE payload(`activity_completed`)와 메인 서버 콜백 payload가
-    같은 모양을 쓰도록 공유한다.
+    PDF 추출 결과를 메인 서버 콜백의 camelCase 계약에 맞춘다.
     """
     data = _as_payload_dict(item)
     return {
@@ -36,8 +35,7 @@ def build_problem_solving_payload(item: Any) -> dict[str, Any]:
 def build_pdf_activity_payload(activity: Any) -> dict[str, Any]:
     """PDF 활동 스키마를 callback payload 형식으로 변환
 
-    PDF 추출의 SSE payload(`activity_completed`)와 메인 서버 콜백 payload가
-    같은 모양을 쓰도록 공유한다.
+    PDF 추출 결과를 메인 서버 콜백의 camelCase 계약에 맞춘다.
     """
     data = _as_payload_dict(activity)
     problem_solving = data.get("problem_solving", data.get("problemSolving", []))

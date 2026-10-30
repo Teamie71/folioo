@@ -1,5 +1,17 @@
 # 경험정리 AI 서버 ↔︎ 메인 서버 API 연동 스펙
 
+수정자: 최진혁
+
+최근 수정일: 2026-10-30
+
+## 수정 이력
+
+| 날짜 | 수정자 | 수정 내용 |
+|---|---|---|
+| 2026-10-30 | 최진혁 | AI 이관 후 문서 정리, 인증 키·checkpointer 안내와 현재 API 목록 연결 |
+
+> 기준일: 2026-10-30
+
 ---
 
 ## 1. 아키텍처
@@ -1362,7 +1374,8 @@ COMMIT
 | `DATABASE_URL` | 경험 맵·AI 세션·요청 DB |
 | `CHECKPOINT_DATABASE_URL` | LangGraph checkpoint 전용 DB |
 | `MAIN_BACKEND_URL` | 커밋·템플릿 API 호출 대상 |
-| `AI_SERVICE_API_KEY` | 메인 ↔︎ AI 서버 간 인증 키 (양방향) |
+| `AI_SERVICE_API_KEY` | 메인 서버 → AI 호출 인증 키 |
+| `MAIN_BACKEND_API_KEY` | AI → 메인 서버 호출 인증 키 |
 | `EXPMAP_TICKET_SECRET` | 티켓 HS256 서명 키. `AI_SERVICE_API_KEY`와 별도 |
 | `ALLOWED_ORIGINS` | 프론트 직결용 CORS 오리진 (기존 변수에 웹 오리진 추가) |
 | `EXPMAP_UPLOAD_BUCKET` | 임시 첨부 파일 bucket |
@@ -1373,9 +1386,9 @@ COMMIT
 | `EXPMAP_FILE_TIMEOUT_SECONDS` | 파일처리(파서·OCR) 기본값 `120` |
 | `EXPMAP_GAP_TIMEOUT_SECONDS` | 기본값 `30` |
 
-**`CHECKPOINT_DATABASE_URL`이 없으면 서버 시작을 실패시킵니다.** `DATABASE_URL`로
-fallback하지 않습니다. 현재 `common/checkpointer/factory.py`가 폴백하도록 되어 있어
-그대로 두면 checkpoint 테이블이 경험 맵 DB에 생성됩니다.
+**`CHECKPOINT_DATABASE_URL`이 없으면 checkpointer 초기화가 실패합니다.**
+현재 `common/checkpointer/factory.py`는 `DATABASE_URL`로 fallback하지 않습니다.
+경험맵 DB와 checkpoint DB를 분리해 설정합니다.
 
 ### 메인 서버
 
@@ -1388,7 +1401,10 @@ fallback하지 않습니다. 현재 `common/checkpointer/factory.py`가 폴백�
 
 ---
 
-## 9. 구현 목록
+## 9. 연동 책임과 설계 기록
+
+아래 목록은 설계 당시의 역할 구분·협의 기록이며, 현재 배포 서버의 구현 완료 여부를 뜻하지 않습니다.
+현재 AI 라우터 목록과 등록 조건은 [API 전체 목록](api-reference.md)을 기준으로 확인합니다.
 
 ### 메인 서버
 
@@ -1415,7 +1431,7 @@ fallback하지 않습니다. 현재 `common/checkpointer/factory.py`가 폴백�
 | 추가 | 커밋 API 클라이언트, `409`·`422` 처리, `GET /commit` 복구 조회 |
 | 추가 | 템플릿 카탈로그 조회·캐시, `slot_id` 선택 |
 | 유지 | 경험 맵 직접 조회(읽기), `ai_experience_*` 쓰기, 재구성 판단 |
-| 유지 | 세션·요청 API 5개, LangGraph, 병렬 coordinator, SSE |
+| 유지 | 세션·요청 API, LangGraph, 병렬 coordinator, SSE |
 
 ### 남은 결정
 

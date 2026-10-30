@@ -1,199 +1,68 @@
-# AGENTS.md - AI 코딩 에이전트 가이드
+# AI 작업 안내
 
-이 문서는 folioo-ai 코드베이스에서 작업하는 AI 에이전트를 위한 가이드입니다.
+수정자: 최진혁
 
-## 프로젝트 개요
+최근 수정일: 2026-10-30
 
-- **언어**: Python 3.12+
-- **프레임워크**: LangGraph (멀티 에이전트), FastAPI (웹), LangChain (LLM 통합)
-- **패키지 매니저**: uv
-- **LLM 제공자**: OpenRouter (via LangChain ChatOpenAI)
+## 수정 이력
 
-## 디렉토리 구조
+| 날짜 | 수정자 | 수정 내용 |
+|---|---|---|
+| 2026-10-30 | 최진혁 | AI 이관 후 문서 정리·현행 안내 반영 |
 
-```
-folioo-ai/
-├── app/                    # FastAPI 애플리케이션
-│   ├── api/v1/             # API v1 엔드포인트
-│   ├── db/migrations/      # 데이터베이스 마이그레이션
-│   ├── models/             # 데이터베이스 모델
-│   └── schemas/            # Pydantic 스키마
-├── common/                 # 공유 유틸리티
-│   ├── llm/                # LLM 클라이언트 (OpenRouter)
-│   ├── utils/              # 공통 유틸리티
-│   └── vector_store/       # 벡터 스토어
-├── features/               # 기능별 모듈
-│   ├── experience_map/      # 경험맵 그래프·노드·프롬프트
-│   ├── correction/          # 첨삭·RAG
-│   └── portfolio/pdf_extraction/ # 첨삭용 PDF 추출
-└── tests/                  # 테스트 (features 구조 미러링)
-```
+> 기준일: 2026-10-30
 
-## 빌드/린트/테스트 명령어
+이 문서는 `apps/ai`에 적용합니다. 설치·환경변수·명령의 상세 설명은 [README](README.md)를 참고하세요.
 
-### 의존성 설치
+## 현재 구조
 
-```bash
-uv sync              # 기본 의존성
-uv sync --dev        # 개발 의존성 포함
-```
+| 경로 | 역할 |
+|---|---|
+| `app/api/v1/` | FastAPI 라우터 |
+| `app/schemas/` | API 요청·응답 스키마 |
+| `common/` | LLM·HTTP 클라이언트, DB 연결, checkpointer |
+| `features/experience_map/` | 경험맵 그래프·카카오·SSE·커밋 처리 |
+| `features/correction/` | 기업 분석(RAG)·첨삭 생성 |
+| `features/portfolio/pdf_extraction/` | 첨삭용 PDF 추출·구조화 |
+| `scripts/experience_map/` | 로컬 DB·티켓·데모 도구 |
+| `tests/` | 기능별 테스트 |
+| `docs/architecture/` | 경험맵·첨삭의 핵심 API 계약 |
+| `deploy/main-server/` | AI 서버 배포 안내 |
 
-### 린트 및 포맷팅
+PPTX 생성 워커와 구형 인터뷰·포트폴리오 생성 API는 제거했습니다.
+경험맵의 PPTX **입력 처리**는 유지합니다.
+
+## 실행과 검사
+
+아래 명령은 저장소 루트에서 실행합니다. 도구 버전은 루트 `mise.toml`, Python 의존성은
+`apps/ai/pyproject.toml`과 `uv.lock`으로 관리합니다.
 
 ```bash
-ruff check .                   # 린트 검사
-ruff check --fix .             # 린트 검사 + 자동 수정
-ruff format .                  # 코드 포맷팅
-ruff format --check .          # 포맷 검사만
-pre-commit run --all-files     # 모든 pre-commit 훅 실행
+mise exec -- pnpm run ai:setup
+mise exec -- pnpm run ai:dev:external
+mise exec -- pnpm run ai:lint
+mise exec -- pnpm run ai:format:check
 ```
 
-### 테스트 실행
+로컬 PostgreSQL 도구도 필요하면 `ai:setup:local`·`ai:dev`를 사용합니다.
+전체 AI 검사는 별도 테스트 DB 주소를 지정해 실행합니다.
 
 ```bash
-# 전체 테스트
-pytest
-
-# 단일 테스트 파일
-pytest tests/test_features/test_experience_map/test_config.py
-
-# 특정 테스트 함수
-pytest tests/test_features/test_experience_map/test_config.py::test_defaults_match_api_spec
-
-# 패턴으로 테스트 선택
-pytest -k "test_defaults"
-
-# 상세 출력
-pytest -v
-
-# 첫 실패시 중단
-pytest -x
+EXPMAP_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55432/folioo_ai_test OPENROUTER_API_KEY=ci-dummy-key mise exec -- pnpm run ai:check
 ```
 
-### 실행
+- `EXPMAP_TEST_DATABASE_URL`은 직접 pytest를 실행할 때도 필수입니다.
+- 개발·운영 DB를 테스트 DB로 사용하지 마세요. 테스트는 스키마 준비와 데이터 정리를 수행합니다.
+- `ai:test`·`ai:check`는 DB 연결 실패를 실패 처리합니다. LLM·외부 HTTP는 테스트 대역을 사용합니다.
+- 수동 LLM 테스트는 실제 사용량이 발생하며, 자동 테스트와 별도로 결과를 기록합니다.
 
-```bash
-python main.py                 # 메인 앱 실행
-langgraph dev                  # LangGraph 개발 서버
-```
+## 수정 원칙
 
-## 코드 스타일 가이드라인
-
-### 임포트 순서
-
-Ruff isort 설정에 따라 정렬됩니다:
-
-```python
-# 1. 표준 라이브러리
-import os
-from functools import lru_cache
-
-# 2. 서드파티 라이브러리
-from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-
-# 3. 퍼스트파티 (app, features, common)
-from common.llm.client import get_llm
-from features.experience_map.state import ExperienceMapState
-```
-
-### 네이밍 컨벤션
-
-| 항목 | 스타일 | 예시 |
-|------|--------|------|
-| 파일/모듈 | snake_case | `file_processor.py` |
-| 클래스 | PascalCase | `ExperienceMapState`, `ExperienceMapSettings` |
-| 함수/변수 | snake_case | `get_settings`, `request_id` |
-| 상수 | UPPER_SNAKE_CASE | `MAX_RETRIES`, `DEFAULT_MODEL` |
-| 프라이빗 | _prefix | `_internal_helper` |
-
-### 타입 힌트
-
-Python 3.12+ 문법 사용 (typing 모듈 임포트 최소화):
-
-```python
-# 권장 (Python 3.12+)
-def process(items: list[str]) -> dict[str, int]:
-    data: str | None = None
-    ...
-
-# 비권장 (레거시)
-from typing import List, Dict, Optional
-def process(items: List[str]) -> Dict[str, int]:
-    data: Optional[str] = None
-```
-
-### 독스트링
-
-Google 스타일, 한국어 사용:
-
-```python
-"""모듈 설명 (한 줄)"""
-
-def get_llm(
-    model: str | None = None,
-    temperature: float = 0.7,
-) -> ChatOpenAI:
-    """
-    OpenRouter 기반 LLM 클라이언트 반환
-
-    Args:
-        model: 사용할 모델명 (기본값: 환경변수 LLM_MODEL)
-        temperature: 생성 다양성 (0.0 ~ 1.0)
-
-    Returns:
-        ChatOpenAI: LangChain 호환 LLM 클라이언트
-
-    Raises:
-        ValueError: API 키가 설정되지 않은 경우
-    """
-```
-
-### 에러 처리
-
-명확한 에러 메시지와 함께 예외 발생 (한국어):
-
-```python
-if not api_key:
-    raise ValueError("OPENROUTER_API_KEY 환경변수가 설정되지 않았습니다.")
-
-if stage not in [1, 2, 3, 4]:
-    raise ValueError(f"Invalid stage: {stage}. Must be 1-4.")
-```
-
-### LangGraph 상태와 모듈
-
-경험맵 상태는 `features/experience_map/state.py`의 `ExperienceMapState`를 사용합니다.
-공개 심볼은 각 패키지의 `__init__.py`에서 명시적으로 export하고 `__all__`로 관리합니다.
-
-## 테스트 작성 가이드
-
-테스트는 `tests/` 아래에서 기능별 구조를 따릅니다.
-예: `features/experience_map/config.py` → `tests/test_features/test_experience_map/test_config.py`.
-외부 API는 대역을 사용하고, DB 테스트는 개발·운영 DB와 분리한 `EXPMAP_TEST_DATABASE_URL`을 지정합니다.
-
-## 설정 파일 참조
-
-| 파일 | 용도 |
-|------|------|
-| `pyproject.toml` | 프로젝트 메타데이터, 의존성, Ruff/pytest 설정 |
-| `.pre-commit-config.yaml` | Pre-commit 훅 (ruff, trailing-whitespace 등) |
-| `langgraph.json` | LangGraph Studio 설정 |
-| `.env` | 환경변수 (OPENROUTER_API_KEY, LLM_MODEL_NAME) |
-
-## 주요 Ruff 규칙
-
-- 라인 길이: 100자
-- 쿼트 스타일: 쌍따옴표 (`"`)
-- 들여쓰기: 스페이스 4칸
-- 규칙: E (pycodestyle), W (warnings), F (pyflakes), I (isort), N (pep8-naming), UP (pyupgrade)
-
-## 커밋 전 체크리스트
-
-1. `ruff check --fix .` 실행
-2. `ruff format .` 실행
-3. `pytest` 실행하여 테스트 통과 확인
-4. 새 기능에 대한 테스트 추가
-
-## 코드 리뷰 규칙
-- 코드 리뷰 코멘트는 반드시 한국어로 작성할 것
+- Python 3.12 타입 힌트, Ruff 포맷·import 정렬, 한국어 docstring을 사용합니다.
+- 기능 코드와 테스트 구조를 맞추고, 삭제한 심볼의 import·라우터·그래프·문서 참조도 확인합니다.
+- API 삭제 시 호출 방향을 구분합니다. AI 진입점 제거와 AI → 백엔드 클라이언트 제거는 별개입니다.
+- 첨삭 API는 비동기 작업을 접수합니다. `202`만으로 처리·저장 성공을 판단하지 마세요.
+- PDF·첨삭 결과 저장에는 백엔드의 사전 상태·저장 항목 준비가 필요합니다.
+- 경험맵 테스트 UI의 메모리 실행은 실제 백엔드·GCS 연동 검증을 대체하지 않습니다.
+- `.env`, 인증 키, 사용자 원문·생성 결과를 커밋하거나 로그에 출력하지 마세요.
+- `docs/local-migration/`은 Git에서 제외된 개인 검증 공간입니다. 공유할 계약은 추적되는 문서에 기록합니다.

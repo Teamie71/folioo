@@ -7,7 +7,8 @@
 -- 대조해서 차이를 없애야 한다.
 --
 -- 운영 migration 과의 차이:
---   ai_experience_request.owner_token — 명세 3-3 에 없다. AGENT_HANDOFF.md 참고.
+--   ai_experience_request.owner_token — 실행권 검증용 uuid 컬럼이 필요하다.
+--   실행 종료 시 NULL로 해제하므로 nullable이어야 하며, 갱신·완료·실패는 token 일치 조건으로 검증한다.
 --   메인 서버 migration 에 이 컬럼이 없으면 운영에서 UndefinedColumnError 가 난다.
 --   ai_experience_request.fallback_message — 명세 3-3 에 없다. fallback 완료
 --   요청은 지금까지 result·suggestion 이 둘 다 비어 재연결·멱등 재생 시 안내
