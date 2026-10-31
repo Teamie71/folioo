@@ -1,0 +1,17 @@
+{
+    "traitMatchCoefficient": 0.8,
+    "majorBonusScore": 0.2,
+    "rocWeights": [0.4566666666666667, 0.25666666666666665, 0.15666666666666668, 0.09, 0.04],
+    "majorFieldConfigs": [
+        { "majorField": "HUMANITIES_SOCIAL", "type": "NEUTRAL", "targetJobCodes": [] },
+        { "majorField": "NATURAL_SCIENCE", "type": "NEUTRAL", "targetJobCodes": [] },
+        { "majorField": "LANGUAGE", "type": "NEUTRAL", "targetJobCodes": [] },
+        { "majorField": "BUSINESS", "type": "NEUTRAL", "targetJobCodes": [] },
+        { "majorField": "ECONOMICS", "type": "NEUTRAL", "targetJobCodes": [] },
+        { "majorField": "MEDIA_COMMUNICATION", "type": "NEUTRAL", "targetJobCodes": [] },
+        { "majorField": "MATH_STATISTICS", "type": "NEUTRAL", "targetJobCodes": [] },
+        { "majorField": "COMPUTER_SCIENCE", "type": "NEUTRAL", "targetJobCodes": [] },
+        { "majorField": "ENGINEERING", "type": "NEUTRAL", "targetJobCodes": [] },
+        { "majorField": "ART_DESIGN", "type": "NEUTRAL", "targetJobCodes": [] }
+    ]
+}

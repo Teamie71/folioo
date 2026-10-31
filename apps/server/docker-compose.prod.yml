@@ -1,0 +1,81 @@
+# ========================================
+# Folioo Server - Production Blue-Green (GCE 배포용)
+# ========================================
+# Override 파일: docker-compose.infra.yml (base)과 함께 사용
+#
+# 사용법:
+#   # Blue 슬롯 실행:
+#   docker compose -f docker-compose.infra.yml -f docker-compose.prod.yml --profile blue up -d
+#
+#   # Green 슬롯 실행:
+#   docker compose -f docker-compose.infra.yml -f docker-compose.prod.yml --profile green up -d
+#
+# Note:
+#   DB는 Supabase, Redis는 Upstash를 사용합니다. (.env.prod에서 주입)
+#   로컬 개발용 파일은 docker-compose.yml 을 참고하세요.
+# ========================================
+
+services:
+    # ── Production Blue Slot ──
+    prod-blue:
+        image: ${DOCKER_IMAGE:-asia-northeast3-docker.pkg.dev/project-70c92536-0c79-44bb-ba0/folioo-docker/folioo-server}:latest
+        restart: unless-stopped
+        env_file:
+            - path: .env.prod
+              required: false
+        environment:
+            APP_PROFILE: prod
+            TZ: Asia/Seoul
+        healthcheck:
+            test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
+            interval: 20s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
+        logging:
+            driver: 'json-file'
+            options:
+                max-size: '10m'
+                max-file: '3'
+        labels:
+            - 'traefik.enable=true'
+            - 'traefik.http.routers.prod.rule=Host(`prod-api.folioo.ai.kr`)'
+            - 'traefik.http.routers.prod.entrypoints=web'
+            - 'traefik.http.services.prod.loadbalancer.server.port=3000'
+            - 'traefik.http.services.prod.loadbalancer.server.scheme=http'
+        profiles:
+            - blue
+        networks:
+            - folioo-network
+
+    # ── Production Green Slot ──
+    prod-green:
+        image: ${DOCKER_IMAGE:-asia-northeast3-docker.pkg.dev/project-70c92536-0c79-44bb-ba0/folioo-docker/folioo-server}:latest
+        restart: unless-stopped
+        env_file:
+            - path: .env.prod
+              required: false
+        environment:
+            APP_PROFILE: prod
+            TZ: Asia/Seoul
+        healthcheck:
+            test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
+            interval: 20s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
+        logging:
+            driver: 'json-file'
+            options:
+                max-size: '10m'
+                max-file: '3'
+        labels:
+            - 'traefik.enable=true'
+            - 'traefik.http.routers.prod.rule=Host(`prod-api.folioo.ai.kr`)'
+            - 'traefik.http.routers.prod.entrypoints=web'
+            - 'traefik.http.services.prod.loadbalancer.server.port=3000'
+            - 'traefik.http.services.prod.loadbalancer.server.scheme=http'
+        profiles:
+            - green
+        networks:
+            - folioo-network

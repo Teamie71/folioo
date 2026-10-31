@@ -1,0 +1,75 @@
+# ========================================
+# Folioo Server - 로컬 개발 환경
+# ========================================
+# 사용법:
+#   1. PostgreSQL만 실행 (NestJS는 IDE/터미널에서):
+#      docker compose up -d
+#      pnpm run start:dev
+#
+#   2. 전체 실행 (PostgreSQL + NestJS):
+#      docker compose --profile full up -d
+#
+#   3. 종료:
+#      docker compose down
+#
+#   4. 데이터 초기화:
+#      docker compose down -v
+# ========================================
+
+services:
+    # ========================================
+    # PostgreSQL Database (로컬 개발용)
+    # ========================================
+    postgres:
+        image: pgvector/pgvector:pg15
+        container_name: folioo-postgres
+        restart: unless-stopped
+        ports:
+            - '5432:5432'
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: folioo
+            TZ: Asia/Seoul
+        volumes:
+            - postgres-data:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U postgres']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - folioo-network
+
+    # ========================================
+    # NestJS Backend (로컬 전체 실행용)
+    # ========================================
+    backend:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: folioo-server
+        restart: unless-stopped
+        depends_on:
+            postgres:
+                condition: service_healthy
+        ports:
+            - '3000:3000'
+        environment:
+            APP_PROFILE: local
+            DB_HOST: postgres
+            DB_PORT: 5432
+            DB_USERNAME: postgres
+            DB_PASSWORD: postgres
+            DB_SCHEMA: folioo
+        networks:
+            - folioo-network
+        profiles:
+            - full # docker compose --profile full up 으로 실행
+
+volumes:
+    postgres-data:
+
+networks:
+    folioo-network:
+        driver: bridge
