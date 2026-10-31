@@ -260,7 +260,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          # 운영 이미지(node:20-alpine)와 맞춥니다. #30에서 이미지와 함께 24로 올립니다.
+          node-version: '20'
           cache: pnpm
           cache-dependency-path: apps/server/pnpm-lock.yaml
 
