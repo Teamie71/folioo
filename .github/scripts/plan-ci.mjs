@@ -7,6 +7,7 @@ const PART_PATHS = Object.freeze({
   bud: ['packages/bud/'],
   web: ['apps/web/', 'packages/bud/'],
   ai: ['apps/ai/'],
+  api: ['apps/server/'],
 });
 
 const PART_FREE_PATTERNS = [
