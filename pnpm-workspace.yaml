@@ -1,5 +1,7 @@
 packages:
   - 'apps/*'
+  # 서버는 자체 lockfile로 설치합니다. 같은 workspace에 두면 optional peer 해석이 web에 번집니다.
+  - '!apps/server'
   - 'packages/*'
   - 'packages/bud/*'
 allowBuilds:
