@@ -25,6 +25,7 @@ jobs:
       bud: ${{ steps.plan.outputs.bud }}
       web: ${{ steps.plan.outputs.web }}
       ai: ${{ steps.plan.outputs.ai }}
+      api: ${{ steps.plan.outputs.api }}
       skipped: ${{ steps.plan.outputs.skipped }}
 
     steps:
@@ -237,10 +238,56 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: mise exec -- pnpm run ai:test
 
+  api:
+    name: api
+    needs: plan
+    if: ${{ needs.plan.outputs.api == 'true' }}
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/server/pnpm-lock.yaml
+
+      - name: Install dependencies
+        id: install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm run lint
+
+      - name: Check formatting
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm run format:check
+
+      - name: Build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm run build
+
+      - name: Unit tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm run test
+
   ci-ok:
     name: ci-ok
     if: ${{ !cancelled() }}
-    needs: [plan, repo, bud, web, ai]
+    needs: [plan, repo, bud, web, ai, api]
     timeout-minutes: 5
     runs-on: ubuntu-latest
 
