@@ -1,0 +1,152 @@
+[
+    {
+        "topValue": "WORK_LIFE_BALANCE",
+        "topTrait": "INVESTIGATIVE",
+        "text": "일과 삶의 균형을 중시하는 탐구형 인재"
+    },
+    {
+        "topValue": "WORK_LIFE_BALANCE",
+        "topTrait": "SOCIAL",
+        "text": "일과 삶의 균형을 중시하는 공감형 인재"
+    },
+    {
+        "topValue": "WORK_LIFE_BALANCE",
+        "topTrait": "ENTERPRISING",
+        "text": "일과 삶의 균형을 중시하는 추진형 인재"
+    },
+    {
+        "topValue": "WORK_LIFE_BALANCE",
+        "topTrait": "CONVENTIONAL",
+        "text": "일과 삶의 균형을 중시하는 체계형 인재"
+    },
+    {
+        "topValue": "WORK_LIFE_BALANCE",
+        "topTrait": "REALISTIC",
+        "text": "일과 삶의 균형을 중시하는 현장형 인재"
+    },
+    {
+        "topValue": "WORK_LIFE_BALANCE",
+        "topTrait": "ARTISTIC",
+        "text": "일과 삶의 균형을 중시하는 창작형 인재"
+    },
+    {
+        "topValue": "REWARD",
+        "topTrait": "INVESTIGATIVE",
+        "text": "확실한 보상을 중시하는 탐구형 인재"
+    },
+    {
+        "topValue": "REWARD",
+        "topTrait": "SOCIAL",
+        "text": "확실한 보상을 중시하는 공감형 인재"
+    },
+    {
+        "topValue": "REWARD",
+        "topTrait": "ENTERPRISING",
+        "text": "확실한 보상을 중시하는 추진형 인재"
+    },
+    {
+        "topValue": "REWARD",
+        "topTrait": "CONVENTIONAL",
+        "text": "확실한 보상을 중시하는 체계형 인재"
+    },
+    {
+        "topValue": "REWARD",
+        "topTrait": "REALISTIC",
+        "text": "확실한 보상을 중시하는 현장형 인재"
+    },
+    {
+        "topValue": "REWARD",
+        "topTrait": "ARTISTIC",
+        "text": "확실한 보상을 중시하는 창작형 인재"
+    },
+    {
+        "topValue": "STABILITY",
+        "topTrait": "INVESTIGATIVE",
+        "text": "안정을 중시하는 탐구형 인재"
+    },
+    {
+        "topValue": "STABILITY",
+        "topTrait": "SOCIAL",
+        "text": "안정을 중시하는 공감형 인재"
+    },
+    {
+        "topValue": "STABILITY",
+        "topTrait": "ENTERPRISING",
+        "text": "안정을 중시하는 추진형 인재"
+    },
+    {
+        "topValue": "STABILITY",
+        "topTrait": "CONVENTIONAL",
+        "text": "안정을 중시하는 체계형 인재"
+    },
+    {
+        "topValue": "STABILITY",
+        "topTrait": "REALISTIC",
+        "text": "안정을 중시하는 현장형 인재"
+    },
+    {
+        "topValue": "STABILITY",
+        "topTrait": "ARTISTIC",
+        "text": "안정을 중시하는 창작형 인재"
+    },
+    {
+        "topValue": "NAME_VALUE",
+        "topTrait": "INVESTIGATIVE",
+        "text": "네임밸류을 중시하는 탐구형 인재"
+    },
+    {
+        "topValue": "NAME_VALUE",
+        "topTrait": "SOCIAL",
+        "text": "네임밸류을 중시하는 공감형 인재"
+    },
+    {
+        "topValue": "NAME_VALUE",
+        "topTrait": "ENTERPRISING",
+        "text": "네임밸류을 중시하는 추진형 인재"
+    },
+    {
+        "topValue": "NAME_VALUE",
+        "topTrait": "CONVENTIONAL",
+        "text": "네임밸류을 중시하는 체계형 인재"
+    },
+    {
+        "topValue": "NAME_VALUE",
+        "topTrait": "REALISTIC",
+        "text": "네임밸류을 중시하는 현장형 인재"
+    },
+    {
+        "topValue": "NAME_VALUE",
+        "topTrait": "ARTISTIC",
+        "text": "네임밸류을 중시하는 창작형 인재"
+    },
+    {
+        "topValue": "GROWTH",
+        "topTrait": "INVESTIGATIVE",
+        "text": "성장과 주도권을 중시하는 탐구형 인재"
+    },
+    {
+        "topValue": "GROWTH",
+        "topTrait": "SOCIAL",
+        "text": "성장과 주도권을 중시하는 공감형 인재"
+    },
+    {
+        "topValue": "GROWTH",
+        "topTrait": "ENTERPRISING",
+        "text": "성장과 주도권을 중시하는 추진형 인재"
+    },
+    {
+        "topValue": "GROWTH",
+        "topTrait": "CONVENTIONAL",
+        "text": "성장과 주도권을 중시하는 체계형 인재"
+    },
+    {
+        "topValue": "GROWTH",
+        "topTrait": "REALISTIC",
+        "text": "성장과 주도권을 중시하는 현장형 인재"
+    },
+    {
+        "topValue": "GROWTH",
+        "topTrait": "ARTISTIC",
+        "text": "성장과 주도권을 중시하는 창작형 인재"
+    }
+]

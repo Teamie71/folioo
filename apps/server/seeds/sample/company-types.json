@@ -1,0 +1,56 @@
+[
+    {
+        "code": "LARGE_ENTERPRISE",
+        "name": "대기업",
+        "scoreWorkLifeBalance": 0.5,
+        "scoreCompensation": 0.5,
+        "scoreStability": 0.5,
+        "scoreBrandValue": 0.5,
+        "scoreGrowth": 0.5
+    },
+    {
+        "code": "MID_SMALL_ENTERPRISE",
+        "name": "중견·중소기업",
+        "scoreWorkLifeBalance": 0.5,
+        "scoreCompensation": 0.5,
+        "scoreStability": 0.5,
+        "scoreBrandValue": 0.5,
+        "scoreGrowth": 0.5
+    },
+    {
+        "code": "STARTUP",
+        "name": "스타트업",
+        "scoreWorkLifeBalance": 0.5,
+        "scoreCompensation": 0.5,
+        "scoreStability": 0.5,
+        "scoreBrandValue": 0.5,
+        "scoreGrowth": 0.5
+    },
+    {
+        "code": "PUBLIC_INSTITUTION",
+        "name": "공기업·공공기관",
+        "scoreWorkLifeBalance": 0.5,
+        "scoreCompensation": 0.5,
+        "scoreStability": 0.5,
+        "scoreBrandValue": 0.5,
+        "scoreGrowth": 0.5
+    },
+    {
+        "code": "FOREIGN",
+        "name": "외국계",
+        "scoreWorkLifeBalance": 0.5,
+        "scoreCompensation": 0.5,
+        "scoreStability": 0.5,
+        "scoreBrandValue": 0.5,
+        "scoreGrowth": 0.5
+    },
+    {
+        "code": "AGENCY",
+        "name": "에이전시",
+        "scoreWorkLifeBalance": 0.5,
+        "scoreCompensation": 0.5,
+        "scoreStability": 0.5,
+        "scoreBrandValue": 0.5,
+        "scoreGrowth": 0.5
+    }
+]
