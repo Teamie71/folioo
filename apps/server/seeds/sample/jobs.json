@@ -1,0 +1,462 @@
+[
+    {
+        "code": "B2B_TECH_SALES",
+        "name": "B2B/기술영업",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "OVERSEAS_SALES",
+        "name": "해외영업",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "SALES_PLANNING",
+        "name": "영업기획/관리",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "RETAIL_SALES",
+        "name": "유통영업/지점관리",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "CS_OPERATIONS",
+        "name": "CS·운영",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "CX_PLANNING",
+        "name": "CX기획",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "B2C_SALES",
+        "name": "B2C영업",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "HRM",
+        "name": "HRM",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "HRD",
+        "name": "HRD",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "FINANCE_ACCOUNTING",
+        "name": "재무/회계",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "PROCUREMENT_SCM",
+        "name": "구매/SCM",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "GENERAL_AFFAIRS",
+        "name": "총무/사무지원",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "PUBLIC_ADMIN",
+        "name": "공공기관 일반행정",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "TRADE",
+        "name": "무역",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "ASSET_MANAGEMENT",
+        "name": "자산운용",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "SECURITIES_RESEARCH",
+        "name": "증권 리서치",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "STRATEGY_PLANNING",
+        "name": "전략기획",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "BIZ_DEV",
+        "name": "사업개발",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "SERVICE_PLANNING",
+        "name": "서비스기획",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "PRODUCT_PLANNING",
+        "name": "상품기획",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "GAME_PLANNING",
+        "name": "게임기획",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "CONTENT_MARKETING",
+        "name": "콘텐츠마케팅",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "BRAND_MARKETING",
+        "name": "브랜드마케팅",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "PERFORMANCE_MARKETING",
+        "name": "퍼포먼스마케팅",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "CRM_MARKETING",
+        "name": "CRM마케팅",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "AD_AE",
+        "name": "광고AE",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "PR",
+        "name": "홍보/PR",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "VIDEO_PRODUCTION",
+        "name": "PD/영상제작",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "EDITOR_COPYWRITER",
+        "name": "에디터/카피라이터",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "CONTENT_IP_CHANNEL",
+        "name": "콘텐츠IP/채널운영",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "CONTENT_PLANNING",
+        "name": "콘텐츠기획",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "UX_UI_DESIGN",
+        "name": "UX/UI디자인",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "BX_GRAPHIC_DESIGN",
+        "name": "BX/그래픽디자인",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "MOTION_DESIGN",
+        "name": "영상/모션디자인",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "PRODUCT_DESIGN",
+        "name": "제품디자인",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "FRONTEND_DEV",
+        "name": "프론트엔드개발",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "BACKEND_DEV",
+        "name": "백엔드개발",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "DATA_ANALYSIS",
+        "name": "데이터분석",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "AI_ML_ENGINEER",
+        "name": "AI/ML엔지니어",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "QA_ENGINEER",
+        "name": "QA 엔지니어",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "GAME_DEV",
+        "name": "게임개발",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "DEVOPS_ENGINEER",
+        "name": "DevOps 엔지니어",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "SECURITY_INFRA",
+        "name": "정보보안/네트워크인프라",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "PRODUCTION_TECH",
+        "name": "생산/공정기술",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "QUALITY_ASSURANCE",
+        "name": "품질관리/보증",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    },
+    {
+        "code": "RND",
+        "name": "R&D/연구개발",
+        "scoreRealistic": 3,
+        "scoreInvestigative": 3,
+        "scoreArtistic": 3,
+        "scoreSocial": 3,
+        "scoreEnterprising": 3,
+        "scoreConventional": 3
+    }
+]
