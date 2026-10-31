@@ -37,15 +37,5 @@ docker-compose.override.yml
 # local planning/session artifacts
 .sisyphus/
 
-# terraform
-infra/.terraform/
-infra/tfplan
-infra/environments/*.tfvars
-!infra/environments/*.tfvars.example
-
-# local server access notes (never commit)
-infra/.server.info
-infra/.server.*
-
 # 실제 직무/기업형태 배점표 (핵심 IP, 절대 커밋 금지). 로컬/CI는 seeds/sample/을 쓴다.
 seeds/production/
