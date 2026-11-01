@@ -35,69 +35,75 @@
 
 ## 로컬 개발 환경 설정
 
+서버는 모노레포 `apps/server`에 있으며 pnpm workspace 밖에서 자체 lockfile(`apps/server/pnpm-lock.yaml`)로 의존성을 관리합니다.
+아래 명령은 모노레포 루트에서 실행합니다. 서버의 스크립트를 직접 실행하려면 `pnpm -C apps/server run <script>`를 사용합니다.
+
 ### 사전 요구사항
 
-- Node.js 20+
-- pnpm (`corepack enable && corepack prepare pnpm@10.28.0 --activate`)
+- mise (`mise install`로 루트 `mise.toml`의 Node 24.22.1과 pnpm 10.33.0 설치. 운영 이미지는 Node 20)
 - Docker & Docker Compose
 
 ### 실행
 
 ```bash
-# 1. 의존성 설치
-pnpm install
+# 1. 서버 의존성 설치 (루트 pnpm install에는 포함되지 않음)
+pnpm api:setup
 
 # 2. PostgreSQL 실행 (Docker)
-docker compose up -d
+docker compose -f apps/server/docker-compose.yml up -d
 
 # 3. 환경변수 설정
-cp .env.example .env  # 필요 시 값 수정
+cp apps/server/.env.example apps/server/.env  # 필요 시 값 수정
 
 # 4. 개발 서버 실행
-pnpm run start:dev
+pnpm api:dev
 ```
 
 ### 전체 Docker 실행 (PostgreSQL + NestJS)
 
 ```bash
-docker compose --profile full up -d
+docker compose -f apps/server/docker-compose.yml --profile full up -d
 ```
 
 ## 주요 명령어
 
 ```bash
-pnpm run start:dev    # 개발 서버 (watch mode)
-pnpm run build        # 빌드
-pnpm run lint         # 린트
-pnpm run test         # 테스트
-pnpm run test:cov     # 테스트 커버리지
+pnpm api:dev                        # 개발 서버 (watch mode)
+pnpm api:build                      # 빌드
+pnpm api:lint                       # 린트
+pnpm api:format                     # 포맷
+pnpm api:test                       # 단위 테스트
+pnpm api:test:e2e                   # e2e 테스트 (DB 필요)
+pnpm api:check                      # 린트 → 포맷 검사 → 빌드 → 단위 테스트
+pnpm -C apps/server run test:cov    # 그 외 스크립트는 -C로 실행
 ```
 
 ## 배포
 
-GitHub Actions를 통해 GCP Compute Engine에 Blue-Green 방식으로 자동 배포됩니다.
+배포 워크플로는 아직 기존 저장소 [Teamie71/folioo-server](https://github.com/Teamie71/folioo-server)에 있습니다.
+dev 배포를 모노레포로 옮기는 작업이 진행 중이며, 전환 뒤 이 절을 갱신합니다.
 
-| 브랜치 | 환경     | 워크플로우                         |
+| 브랜치 | 환경     | 워크플로우 (folioo-server 기준)    |
 | ------ | -------- | ---------------------------------- |
 | `dev`  | 개발     | `.github/workflows/deploy-dev.yml` |
 | `main` | 프로덕션 | `.github/workflows/deploy.yml`     |
 
-인프라 변경 시 `.github/workflows/terraform.yml`이 자동 실행됩니다.
+인프라(Terraform)는 기존 저장소의 `infra/`에서 계속 관리하며, 변경 시 `.github/workflows/terraform.yml`이 실행됩니다.
 
 ## 문서
 
-| 문서               | 경로                                    |
-| ------------------ | --------------------------------------- |
-| 아키텍처           | `docs/architecture/ARCHITECTURE.md`     |
-| 도메인 전략        | `docs/architecture/DOMAIN_STRATEGY.md`  |
-| ERD/DB 설계        | `docs/architecture/ERD.md`              |
-| 코드 스타일        | `docs/development/CODE_STYLE.md`        |
-| 예외 처리          | `docs/development/ERROR_HANDLING.md`    |
-| Git 컨벤션         | `docs/development/GIT_CONVENTIONS.md`   |
-| API 현황           | `docs/API.md`                           |
-| 환경변수 관리      | `docs/infrastructure/ENV_MANAGEMENT.md` |
-| 인프라 (Terraform) | `infra/README.md`                       |
-| Terraform 인수인계 | `infra/docs/TERRAFORM_HANDOVER.md`      |
-| GCP 마이그레이션   | `infra/docs/GCP_MIGRATION_GUIDE.md`     |
+| 문서               | 경로                                                                                                                                      |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 아키텍처           | `docs/architecture/ARCHITECTURE.md`                                                                                                       |
+| 도메인 전략        | `docs/architecture/DOMAIN_STRATEGY.md`                                                                                                    |
+| ERD/DB 설계        | `docs/architecture/ERD.md`                                                                                                                |
+| 코드 스타일        | `docs/development/CODE_STYLE.md`                                                                                                          |
+| 예외 처리          | `docs/development/ERROR_HANDLING.md`                                                                                                      |
+| Git 컨벤션         | `docs/development/GIT_CONVENTIONS.md`                                                                                                     |
+| API 현황           | `docs/API.md`                                                                                                                             |
+| 환경변수 관리      | `docs/infrastructure/ENV_MANAGEMENT.md`                                                                                                   |
+| 인프라 (Terraform) | [folioo-server `infra/README.md`](https://github.com/Teamie71/folioo-server/blob/dev/infra/README.md)                                     |
+| Terraform 인수인계 | [folioo-server `infra/docs/TERRAFORM_HANDOVER.md`](https://github.com/Teamie71/folioo-server/blob/dev/infra/docs/TERRAFORM_HANDOVER.md)   |
+| GCP 마이그레이션   | [folioo-server `infra/docs/GCP_MIGRATION_GUIDE.md`](https://github.com/Teamie71/folioo-server/blob/dev/infra/docs/GCP_MIGRATION_GUIDE.md) |
 
-전체 문서 목록은 `CLAUDE.md`의 문서 경로 테이블을 참고하세요.
+전체 문서 목록은 `AGENTS.md`의 문서 경로 테이블을 참고하세요.

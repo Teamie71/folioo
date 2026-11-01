@@ -49,7 +49,11 @@ mise exec -- pnpm install --frozen-lockfile
 | `pnpm ai:dev`                   | 로컬 DB 도구를 포함한 AI 서버. 환경 변수·DB 준비 필요                         |
 | `pnpm ai:dev:external`          | 외부 PostgreSQL을 사용하는 AI 서버. 환경 변수·DB 준비 필요                    |
 | `pnpm ai:check`                 | AI 린트·포맷·테스트. 전용 테스트 DB 등 준비 필요                              |
-| `pnpm check:all`                | 기존 공통·프론트·토큰 검사 성공 후 AI 전체 검사                               |
+| `pnpm api:setup`                | 서버 의존성 설치. 서버는 workspace 밖이라 루트 `pnpm install`에 포함되지 않음 |
+| `pnpm api:dev`                  | 서버 개발 서버(watch). `apps/server/.env`와 DB 준비 필요                      |
+| `pnpm api:check`                | 서버 린트·포맷 검사·빌드·단위 테스트. DB 불필요                               |
+| `pnpm api:test:e2e`             | 서버 e2e 테스트. DB 준비 필요                                                 |
+| `pnpm check:all`                | 기존 공통·프론트·토큰 검사 성공 후 AI 전체 검사, 이어서 서버 전체 검사        |
 
 ```sh
 mise exec -- pnpm run web:dev
@@ -64,18 +68,22 @@ mise exec -- pnpm check
 - 루트 `pnpm lint`: 루트 설정·스크립트와 BUD 등 공통 JS/TS 코드. `apps/web`은 제외합니다.
 - 웹 `pnpm web:lint`: `apps/web`의 Next.js·React·TypeScript 코드.
 - AI `pnpm ai:lint`: AI Python 코드의 Ruff 검사.
+- 서버 `pnpm api:lint`: `apps/server`의 NestJS·TypeScript 코드. 서버 자체 ESLint·Prettier 설정을 사용하고 루트 검사에서는 제외합니다.
 
 CI의 `repo` job은 공통 포맷과 루트 린트를 담당합니다. 변경 영향에 따라 실행되는 `web` job은
 웹 린트 → 타입 검사 → 빌드 순서를 유지합니다. 로컬 `pnpm check`도 웹 린트를 타입 검사·빌드보다 먼저 실행합니다.
+`api` job은 서버 린트 → 포맷 검사 → 빌드 → 단위 테스트를 로컬과 같은 `api:*` 명령으로 실행하며, 운영 이미지와 같은 Node 20을 사용합니다.
 AI 패키지가 Turbo의 scope에 표시되더라도 `check-types`·`build` 스크립트가 없는 AI 패키지의 테스트가 실행되는 것은 아닙니다.
 AI 검증 완료 여부는 별도 `ai:check` 결과로 판단합니다.
 
 현재 `check`는 기존 공통·프론트·토큰 검사 범위를 유지합니다. 웹만 검사하려면 `pnpm run web:check`를 사용합니다.
-`check:all`은 `check`와 `ai:check`를 순차 실행하며, `web:check`를 추가로 중복 실행하지 않습니다.
+`check:all`은 `check`, `ai:check`, `api:check`를 순차 실행하며, `web:check`를 추가로 중복 실행하지 않습니다.
 공통 검사는 Prettier·ESLint를 사용하고, AI Python 검사는 별도로 Ruff를 사용합니다.
 
 후속으로 `check`에서 프론트 검사를 완전히 분리하고 `check:all`에서 공통 검사와 각 파트 검사를 취합할 예정입니다.
-백엔드의 `api:check`는 실제 검사 명령이 구현될 때 추가하며, 현재는 빈 성공 명령을 만들지 않습니다.
+백엔드 `api:*` 명령은 `pnpm -C apps/server`로 서버 스크립트를 실행합니다. 서버는 pnpm workspace 밖에서 자체 lockfile을 쓰므로
+루트 `pnpm install` 뒤에 `pnpm api:setup`을 따로 실행하고, Turbo 태스크와 `--filter`는 서버를 대상으로 하지 않습니다.
+`api:build`·`api:lint`·`api:format`·`api:format:check`·`api:test`도 같은 방식으로 서버의 스크립트를 실행합니다.
 
 명령 예시는 macOS·Linux의 sh/bash/zsh 기준입니다. Windows에서는 셸과 AI 로컬 DB 지원 여부를 확인하고,
 AI 환경 구성은 해당 문서를 따릅니다.

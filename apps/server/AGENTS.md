@@ -21,29 +21,29 @@ Folioo는 포트폴리오 관리 및 첨삭 플랫폼입니다. NestJS + TypeORM
 
 상세한 내용은 아래 문서 참조:
 
-| 문서               | 경로                                        |
-| ------------------ | ------------------------------------------- |
-| 아키텍처           | `docs/architecture/ARCHITECTURE.md`         |
-| 도메인 전략        | `docs/architecture/DOMAIN_STRATEGY.md`      |
-| ERD/DB 설계        | `docs/architecture/ERD.md`                  |
-| 코드 스타일        | `docs/development/CODE_STYLE.md`            |
-| 예외 처리          | `docs/development/ERROR_HANDLING.md`        |
-| Git 컨벤션         | `docs/development/GIT_CONVENTIONS.md`       |
-| 네이밍 컨벤션      | `docs/development/NAMING_CONVENTIONS.md`    |
-| DTO 검증 규칙      | `docs/development/DTO_VALIDATION.md`        |
-| any 정책           | `docs/development/ANY_POLICY.md`            |
-| DB 마이그레이션    | `docs/development/DB_MIGRATION_WORKFLOW.md` |
-| Internal API 패턴  | `docs/development/INTERNAL_API_PATTERN.md`  |
-| Dev DB Reset       | `docs/development/DEV_DB_RESET.md`          |
-| API 현황           | `docs/API.md`                               |
-| 환경변수 관리      | `docs/infrastructure/ENV_MANAGEMENT.md`     |
-| 비용 추정          | `docs/infrastructure/COST_ESTIMATE.md`      |
-| 인프라(Terraform)  | `infra/README.md`                           |
-| Terraform 인수인계 | `infra/docs/TERRAFORM_HANDOVER.md`          |
-| GCP 마이그레이션   | `infra/docs/GCP_MIGRATION_GUIDE.md`         |
-| Env 계약           | `infra/docs/env-contract.md`                |
-| PR 템플릿          | `.github/PULL_REQUEST_TEMPLATE.md`          |
-| Issue 템플릿       | `.github/ISSUE_TEMPLATE/`                   |
+| 문서               | 경로                                                                                                                                      |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 아키텍처           | `docs/architecture/ARCHITECTURE.md`                                                                                                       |
+| 도메인 전략        | `docs/architecture/DOMAIN_STRATEGY.md`                                                                                                    |
+| ERD/DB 설계        | `docs/architecture/ERD.md`                                                                                                                |
+| 코드 스타일        | `docs/development/CODE_STYLE.md`                                                                                                          |
+| 예외 처리          | `docs/development/ERROR_HANDLING.md`                                                                                                      |
+| Git 컨벤션         | `docs/development/GIT_CONVENTIONS.md`                                                                                                     |
+| 네이밍 컨벤션      | `docs/development/NAMING_CONVENTIONS.md`                                                                                                  |
+| DTO 검증 규칙      | `docs/development/DTO_VALIDATION.md`                                                                                                      |
+| any 정책           | `docs/development/ANY_POLICY.md`                                                                                                          |
+| DB 마이그레이션    | `docs/development/DB_MIGRATION_WORKFLOW.md`                                                                                               |
+| Internal API 패턴  | `docs/development/INTERNAL_API_PATTERN.md`                                                                                                |
+| Dev DB Reset       | `docs/development/DEV_DB_RESET.md`                                                                                                        |
+| API 현황           | `docs/API.md`                                                                                                                             |
+| 환경변수 관리      | `docs/infrastructure/ENV_MANAGEMENT.md`                                                                                                   |
+| 비용 추정          | `docs/infrastructure/COST_ESTIMATE.md`                                                                                                    |
+| 인프라(Terraform)  | [folioo-server `infra/README.md`](https://github.com/Teamie71/folioo-server/blob/dev/infra/README.md)                                     |
+| Terraform 인수인계 | [folioo-server `infra/docs/TERRAFORM_HANDOVER.md`](https://github.com/Teamie71/folioo-server/blob/dev/infra/docs/TERRAFORM_HANDOVER.md)   |
+| GCP 마이그레이션   | [folioo-server `infra/docs/GCP_MIGRATION_GUIDE.md`](https://github.com/Teamie71/folioo-server/blob/dev/infra/docs/GCP_MIGRATION_GUIDE.md) |
+| Env 계약           | [folioo-server `infra/docs/env-contract.md`](https://github.com/Teamie71/folioo-server/blob/dev/infra/docs/env-contract.md)               |
+| PR 템플릿          | `.github/PULL_REQUEST_TEMPLATE.md`                                                                                                        |
+| Issue 템플릿       | `.github/ISSUE_TEMPLATE/`                                                                                                                 |
 
 ## 핵심 규칙
 
@@ -172,6 +172,8 @@ export class ExternalPortfolioService {
 - 따라서 DELETE API도 기본적으로 `204 No Content` 대신 `200 OK` + 메시지(`string`) 응답을 사용합니다.
 
 ## 자주 사용하는 명령어
+
+모노레포 루트에서는 `pnpm api:<script>`(예: `pnpm api:dev`, `pnpm api:test`)로 실행합니다. 아래는 `apps/server` 디렉터리에서 실행하는 기준입니다.
 
 ```bash
 # 개발 서버
