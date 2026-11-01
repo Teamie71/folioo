@@ -40,7 +40,7 @@
 
 ### 사전 요구사항
 
-- mise (`mise install`로 루트 `mise.toml`의 Node 24.22.1과 pnpm 10.33.0 설치. 운영 이미지는 Node 20)
+- mise: `mise install`로 루트 `mise.toml`의 Node 24.22.1과 pnpm 10.33.0을 설치합니다. 셸에 `mise activate`를 설정하지 않았다면 아래 명령 앞에 `mise exec --`를 붙입니다(루트 README 참고). 운영 이미지는 Node 20입니다
 - Docker & Docker Compose
 
 ### 실행
