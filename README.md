@@ -33,27 +33,27 @@ mise exec -- pnpm install --frozen-lockfile
 
 ## 실행·검사 범위
 
-| 명령 (`mise exec --` 뒤에 실행) | 범위·사전 조건                                                                |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| `pnpm dev`                      | 현재 웹 개발 서버와 선행 BUD 빌드. AI 서버 제외                               |
-| `pnpm build`                    | 정의된 패키지 빌드. 현재 BUD·웹                                               |
-| `pnpm check`                    | 공통 포맷·공통 린트·웹 린트·타입 검사·빌드를 순서대로 실행. AI 전용 검사 제외 |
-| `pnpm web:dev`                  | 웹 개발 서버와 선행 BUD 빌드                                                  |
-| `pnpm web:lint`                 | 웹의 Next.js·React·TypeScript 린트                                            |
-| `pnpm web:check-types`          | 선행 의존성 빌드 후 웹 타입 검사                                              |
-| `pnpm web:build`                | 선행 의존성 빌드 후 웹 프로덕션 빌드                                          |
-| `pnpm web:start`                | 빌드된 웹 프로덕션 서버 실행                                                  |
-| `pnpm web:check`                | 웹 린트 → 타입 검사 → 빌드. 공통 포맷·린트와 AI 검사 제외                     |
-| `pnpm ai:setup`                 | AI 기본·개발 의존성 설치                                                      |
-| `pnpm ai:setup:local`           | 로컬 DB 실행 지원을 포함한 AI 의존성 설치                                     |
-| `pnpm ai:dev`                   | 로컬 DB 도구를 포함한 AI 서버. 환경 변수·DB 준비 필요                         |
-| `pnpm ai:dev:external`          | 외부 PostgreSQL을 사용하는 AI 서버. 환경 변수·DB 준비 필요                    |
-| `pnpm ai:check`                 | AI 린트·포맷·테스트. 전용 테스트 DB 등 준비 필요                              |
-| `pnpm api:setup`                | 서버 의존성 설치. 서버는 workspace 밖이라 루트 `pnpm install`에 포함되지 않음 |
-| `pnpm api:dev`                  | 서버 개발 서버(watch). `apps/server/.env`와 DB 준비 필요                      |
-| `pnpm api:check`                | 서버 린트·포맷 검사·빌드·단위 테스트. DB 불필요                               |
-| `pnpm api:test:e2e`             | 서버 e2e 테스트. DB 준비 필요                                                 |
-| `pnpm check:all`                | 기존 공통·프론트·토큰 검사 성공 후 AI 전체 검사, 이어서 서버 전체 검사        |
+| 명령 (`mise exec --` 뒤에 실행) | 범위·사전 조건                                                                                                  |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                      | 현재 웹 개발 서버와 선행 BUD 빌드. AI 서버 제외                                                                 |
+| `pnpm build`                    | 정의된 패키지 빌드. 현재 BUD·웹                                                                                 |
+| `pnpm check`                    | 공통 포맷·공통 린트·웹 린트·타입 검사·빌드를 순서대로 실행. AI 전용 검사 제외                                   |
+| `pnpm web:dev`                  | 웹 개발 서버와 선행 BUD 빌드                                                                                    |
+| `pnpm web:lint`                 | 웹의 Next.js·React·TypeScript 린트                                                                              |
+| `pnpm web:check-types`          | 선행 의존성 빌드 후 웹 타입 검사                                                                                |
+| `pnpm web:build`                | 선행 의존성 빌드 후 웹 프로덕션 빌드                                                                            |
+| `pnpm web:start`                | 빌드된 웹 프로덕션 서버 실행                                                                                    |
+| `pnpm web:check`                | 웹 린트 → 타입 검사 → 빌드. 공통 포맷·린트와 AI 검사 제외                                                       |
+| `pnpm ai:setup`                 | AI 기본·개발 의존성 설치                                                                                        |
+| `pnpm ai:setup:local`           | 로컬 DB 실행 지원을 포함한 AI 의존성 설치                                                                       |
+| `pnpm ai:dev`                   | 로컬 DB 도구를 포함한 AI 서버. 환경 변수·DB 준비 필요                                                           |
+| `pnpm ai:dev:external`          | 외부 PostgreSQL을 사용하는 AI 서버. 환경 변수·DB 준비 필요                                                      |
+| `pnpm ai:check`                 | AI 린트·포맷·테스트. 전용 테스트 DB 등 준비 필요                                                                |
+| `pnpm api:setup`                | 서버 의존성 설치. 서버는 workspace 밖이라 루트 `pnpm install`에 포함되지 않음                                   |
+| `pnpm api:dev`                  | 서버 개발 서버(watch). `api:setup`과 `apps/server/.env`, DB 준비 필요                                           |
+| `pnpm api:check`                | 서버 린트·포맷 검사·빌드·단위 테스트. `api:setup` 선행, DB 불필요                                               |
+| `pnpm api:test:e2e`             | 서버 e2e 테스트. `api:setup`과 DB 준비 필요                                                                     |
+| `pnpm check:all`                | 기존 공통·프론트·토큰 검사 성공 후 AI 전체 검사, 이어서 서버 전체 검사. 서버 의존성은 `api:setup`으로 먼저 설치 |
 
 ```sh
 mise exec -- pnpm run web:dev
