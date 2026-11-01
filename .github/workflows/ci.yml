@@ -244,9 +244,6 @@ jobs:
     if: ${{ needs.plan.outputs.api == 'true' }}
     timeout-minutes: 20
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/server
 
     steps:
       - name: Check out code
@@ -265,25 +262,25 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/server/pnpm-lock.yaml
 
-      - name: Install dependencies
+      - name: Install server dependencies
         id: install
-        run: pnpm install --frozen-lockfile
+        run: pnpm run api:setup
 
       - name: Lint
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: pnpm run lint
+        run: pnpm run api:lint
 
       - name: Check formatting
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: pnpm run format:check
+        run: pnpm run api:format:check
 
       - name: Build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: pnpm run build
+        run: pnpm run api:build
 
       - name: Unit tests
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: pnpm run test
+        run: pnpm run api:test
 
   ci-ok:
     name: ci-ok
