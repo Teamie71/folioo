@@ -2,7 +2,7 @@
 
 This project manages runtime env values with GCP Secret Manager.
 
-> 환경변수 키 목록과 JSON 예시는 [`infra/docs/env-contract.md`](../../infra/docs/env-contract.md)를 참고하세요.
+> 환경변수 키 목록과 JSON 예시는 [folioo-server `infra/docs/env-contract.md`](https://github.com/Teamie71/folioo-server/blob/dev/infra/docs/env-contract.md)를 참고하세요.
 
 ### Source of Truth
 

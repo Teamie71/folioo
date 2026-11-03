@@ -14,7 +14,7 @@
     "lint": "eslint . --max-warnings 0",
     "check-types": "turbo run check-types",
     "check": "pnpm format:check && pnpm lint && pnpm run web:lint && pnpm check-types && pnpm build",
-    "check:all": "pnpm run check && pnpm run ai:check",
+    "check:all": "pnpm run check && pnpm run ai:check && pnpm run api:check",
     "web:dev": "turbo run dev --filter=@folioo/web",
     "web:lint": "pnpm --filter @folioo/web lint",
     "web:check-types": "turbo run check-types --filter=@folioo/web",
@@ -29,7 +29,16 @@
     "ai:format": "pnpm --filter @folioo/ai run format",
     "ai:format:check": "turbo run format:check --filter=@folioo/ai",
     "ai:test": "EXPMAP_REQUIRE_DB=1 turbo run test --filter=@folioo/ai",
-    "ai:check": "pnpm run ai:lint && pnpm run ai:format:check && pnpm run ai:test"
+    "ai:check": "pnpm run ai:lint && pnpm run ai:format:check && pnpm run ai:test",
+    "api:setup": "pnpm -C apps/server install --frozen-lockfile",
+    "api:dev": "pnpm -C apps/server run start:dev",
+    "api:build": "pnpm -C apps/server run build",
+    "api:lint": "pnpm -C apps/server run lint",
+    "api:format": "pnpm -C apps/server run format",
+    "api:format:check": "pnpm -C apps/server run format:check",
+    "api:test": "pnpm -C apps/server run test",
+    "api:test:e2e": "pnpm -C apps/server run test:e2e",
+    "api:check": "pnpm run api:lint && pnpm run api:format:check && pnpm run api:build && pnpm run api:test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
