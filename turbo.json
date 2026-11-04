@@ -43,6 +43,26 @@
         "UV_OFFLINE",
         "UV_PYTHON"
       ]
+    },
+    "@folioo/web#storybook": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "@folioo/web#build-storybook": {
+      "dependsOn": ["^build"],
+      "outputs": ["storybook-static/**"]
+    },
+    "@folioo/web#test:stories": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "outputs": [],
+      "passThroughEnv": ["CI"]
+    },
+    "@folioo/web#check:storybook": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "outputs": []
     }
   }
 }

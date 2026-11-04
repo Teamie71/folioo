@@ -20,3 +20,8 @@ apps/ai/**
 
 # 서버 이관 시 기존 문서·설정 형식을 유지합니다. TypeScript 코드는 서버 자체 Prettier 설정으로 검사합니다.
 apps/server/**
+
+# Generated QA output
+apps/web/storybook-static/**
+apps/web/playwright-report/**
+apps/web/test-results/**
