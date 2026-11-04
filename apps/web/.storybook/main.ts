@@ -6,7 +6,12 @@ import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
 const config: StorybookConfig = {
   stories: ['../src/stories/**/*.stories.tsx'],
   framework: '@storybook/nextjs-vite',
-  addons: ['@storybook/addon-docs', '@storybook/addon-a11y', '@storybook/addon-vitest'],
+  addons: [
+    '@storybook/addon-docs',
+    '@storybook/addon-a11y',
+    '@storybook/addon-vitest',
+    'msw-storybook-addon',
+  ],
   staticDirs: ['../public'],
   core: { disableTelemetry: true },
   // VE의 Node 평가 경로에서도 웹 소스 alias를 해석할 수 있어야 한다.
