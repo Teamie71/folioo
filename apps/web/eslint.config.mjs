@@ -6,7 +6,7 @@ export default defineConfig([
   ...nextVitals,
   ...nextTypescript,
   globalIgnores([
-    'public/mockServiceWorker.js',
+    '.storybook/public/mockServiceWorker.js',
     'storybook-static/**',
     '.next/**',
     'next-env.d.ts',
