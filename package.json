@@ -38,7 +38,10 @@
     "api:format:check": "pnpm -C apps/server run format:check",
     "api:test": "pnpm -C apps/server run test",
     "api:test:e2e": "pnpm -C apps/server run test:e2e",
-    "api:check": "pnpm run api:lint && pnpm run api:format:check && pnpm run api:build && pnpm run api:test"
+    "api:check": "pnpm run api:lint && pnpm run api:format:check && pnpm run api:build && pnpm run api:test",
+    "web:qa:plan": "pnpm --filter @folioo/web qa:plan",
+    "web:qa:smoke": "pnpm --filter @folioo/web qa:smoke",
+    "web:qa:full": "pnpm --filter @folioo/web qa:full"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -7,7 +7,10 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --max-warnings 0",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "next typegen && tsc --noEmit",
+    "qa:plan": "node scripts/qa/check-contract.mjs --check",
+    "qa:smoke": "node scripts/qa/run-e2e.mjs smoke",
+    "qa:full": "node scripts/qa/run-e2e.mjs full"
   },
   "dependencies": {
     "@folioo/bud-tokens": "workspace:*",
