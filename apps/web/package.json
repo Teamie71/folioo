@@ -55,7 +55,7 @@
   },
   "msw": {
     "workerDirectory": [
-      "public"
+      ".storybook/public"
     ]
   }
 }
