@@ -22,6 +22,7 @@ apps/ai/**
 apps/server/**
 
 # Generated QA output
+apps/web/public/mockServiceWorker.js
 apps/web/storybook-static/**
 apps/web/playwright-report/**
 apps/web/test-results/**
