@@ -2,3 +2,11 @@
 
 # Next.js가 next dev/build/typegen 실행 시 자동 생성합니다.
 /next-env.d.ts
+
+# QA generated evidence
+/storybook-static/
+/playwright-report/
+/test-results/
+/blob-report/
+/coverage/
+/test/.auth/
