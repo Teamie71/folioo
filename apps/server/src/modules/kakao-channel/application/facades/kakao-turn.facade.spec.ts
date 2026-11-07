@@ -42,6 +42,19 @@ describe('Kakao turn contract', () => {
     const sessions = { getOrCreate: jest.fn() };
     const blocks = { findExperienceOrThrow: jest.fn() };
     const users = { findByIdOrThrow: jest.fn() };
+    const createFacade = (config: Record<string, string> = {}) =>
+        new KakaoSkillFacade(
+            users as unknown as UserService,
+            links as unknown as KakaoChannelLinkService,
+            new ConfigService({
+                KAKAO_WEB_EXPERIENCE_URL: 'https://folioo.test/experience',
+                ...config,
+            }),
+            blocks as unknown as BlockService,
+            sessions as unknown as AiExperienceSessionService,
+            usage as unknown as AiAgentUsageService,
+            turns
+        );
     let facade: KakaoSkillFacade;
 
     beforeEach(() => {
@@ -58,15 +71,7 @@ describe('Kakao turn contract', () => {
         );
         relay.postJson.mockResolvedValue({ status: 202 });
         relay.getJson.mockResolvedValue({ status: 404 });
-        facade = new KakaoSkillFacade(
-            users as unknown as UserService,
-            links as unknown as KakaoChannelLinkService,
-            new ConfigService({ KAKAO_WEB_EXPERIENCE_URL: 'https://folioo.test/experience' }),
-            blocks as unknown as BlockService,
-            sessions as unknown as AiExperienceSessionService,
-            usage as unknown as AiAgentUsageService,
-            turns
-        );
+        facade = createFacade();
     });
     afterEach(() => {
         jest.restoreAllMocks();
@@ -251,6 +256,21 @@ describe('Kakao turn contract', () => {
             expect(relay.postJson).not.toHaveBeenCalled();
         }
     );
+
+    it('복구 플래그가 없으면 미완료 턴을 조회해 AI 상태를 확인한다', async () => {
+        links.findPendingTurns.mockResolvedValue([{ userId: 1, turnRequestId: 'r1' }]);
+        await facade.recoverPending();
+        expect(links.findPendingTurns).toHaveBeenCalledTimes(1);
+        expect(relay.getJson).toHaveBeenCalledTimes(1);
+    });
+
+    it('KAKAO_TURN_RECOVERY_ENABLED=false면 미완료 턴을 조회하지 않는다', async () => {
+        links.findPendingTurns.mockResolvedValue([{ userId: 1, turnRequestId: 'r1' }]);
+        await createFacade({ KAKAO_TURN_RECOVERY_ENABLED: 'false' }).recoverPending();
+        expect(links.findPendingTurns).not.toHaveBeenCalled();
+        expect(relay.getJson).not.toHaveBeenCalled();
+        expect(links.releaseTurnLock).not.toHaveBeenCalled();
+    });
 
     it('404·조회 장애·다른 요청 응답은 성급하게 환불하지 않는다', async () => {
         for (const response of [
