@@ -55,8 +55,17 @@ describe('Kakao turn contract', () => {
             usage as unknown as AiAgentUsageService,
             turns
         );
+    const originalRecoveryFlag = process.env.KAKAO_TURN_RECOVERY_ENABLED;
     let facade: KakaoSkillFacade;
 
+    beforeAll(() => {
+        delete process.env.KAKAO_TURN_RECOVERY_ENABLED;
+    });
+    afterAll(() => {
+        if (originalRecoveryFlag !== undefined) {
+            process.env.KAKAO_TURN_RECOVERY_ENABLED = originalRecoveryFlag;
+        }
+    });
     beforeEach(() => {
         jest.resetAllMocks();
         jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
