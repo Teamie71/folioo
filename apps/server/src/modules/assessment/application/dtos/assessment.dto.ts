@@ -65,7 +65,7 @@ export class CreateAssessmentReqDTO {
     majorField: MajorField | null;
 }
 
-class ScoredJobResDTO {
+export class ScoredJobResDTO {
     @ApiProperty()
     code: string;
 
