@@ -13,7 +13,7 @@ interface JsonObject {
     [key: string]: JsonValue;
 }
 
-class InternalCorrectionItemResDTO {
+export class InternalCorrectionItemResDTO {
     portfolioId: number;
     description: JsonObject | null;
     responsibilities: JsonObject | null;
