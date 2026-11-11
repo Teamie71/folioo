@@ -1,4 +1,5 @@
 jest.mock('typeorm-transactional', () => ({ Transactional: () => () => undefined }));
+jest.mock('../kakao-error-reporter');
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { BusinessException } from 'src/common/exceptions/business.exception';
@@ -15,6 +16,11 @@ import { KakaoTurnService } from '../services/kakao-turn.service';
 import { KakaoChannelLinkService } from '../services/kakao-channel-link.service';
 import { KAKAO_MESSAGES } from '../kakao-messages';
 import { textResponse } from '../kakao-skill-response';
+import {
+    reportKakaoAiRelayFailure,
+    reportKakaoAiTurnFailure,
+    reportKakaoError,
+} from '../kakao-error-reporter';
 
 describe('Kakao turn contract', () => {
     const payload = {
@@ -289,5 +295,148 @@ describe('Kakao turn contract', () => {
         await facade.recoverUser(1, requestId);
         expect(links.releaseTurnLock).toHaveBeenCalledTimes(2);
         expect(relay.getJson).not.toHaveBeenCalled();
+    });
+
+    describe('Sentry 실패 보고', () => {
+        const submittedRequestId = () =>
+            ((relay.postJson.mock.calls as unknown[][])[0][0] as { body: { request_id: string } })
+                .body.request_id;
+
+        it('정상 접수는 보고하지 않는다', async () => {
+            await facade.submit(1, '12', payload, Date.now());
+            expect(reportKakaoAiRelayFailure).not.toHaveBeenCalled();
+            expect(reportKakaoAiTurnFailure).not.toHaveBeenCalled();
+            expect(reportKakaoError).not.toHaveBeenCalled();
+        });
+
+        it('② AI가 접수를 거절하면 ai-relay로 보고하고, 보상 처리는 ③으로 보고하지 않는다', async () => {
+            relay.postJson.mockResolvedValue({ status: 404 });
+            await facade.submit(1, '12', payload, Date.now());
+
+            expect(reportKakaoAiRelayFailure).toHaveBeenCalledWith('submit', 'REJECTED', {
+                userId: 1,
+                requestId: submittedRequestId(),
+            });
+            expect(usage.markFailed).toHaveBeenCalledTimes(1);
+            expect(reportKakaoAiTurnFailure).not.toHaveBeenCalled();
+        });
+
+        it('② 접수 timeout은 UNKNOWN으로 보고하고 콜백 토큰을 넘기지 않는다', async () => {
+            relay.postJson.mockRejectedValue(new Error(payload.userRequest.callbackUrl));
+            await facade.submit(1, '12', payload, Date.now());
+
+            expect(reportKakaoAiRelayFailure).toHaveBeenCalledWith('submit', 'UNKNOWN', {
+                userId: 1,
+                requestId: submittedRequestId(),
+            });
+            expect(
+                JSON.stringify((reportKakaoAiRelayFailure as jest.Mock).mock.calls)
+            ).not.toContain('callback/token');
+        });
+
+        it('① 턴 준비 중 예외는 request_id와 함께 보고한다', async () => {
+            const error = new Error('session failed');
+            sessions.getOrCreate.mockRejectedValue(error);
+            await facade.submit(1, '12', payload, Date.now());
+
+            expect(reportKakaoError).toHaveBeenCalledWith(error, 'submit', {
+                userId: 1,
+                requestId: expect.any(String) as string,
+            });
+        });
+
+        it('일일 한도 초과는 보고하지 않는다', async () => {
+            usage.consume.mockRejectedValue(
+                new BusinessException(ErrorCode.EXPERIENCE_MAP_DAILY_LIMIT_EXCEEDED)
+            );
+            await facade.submit(1, '12', payload, Date.now());
+
+            expect(reportKakaoError).not.toHaveBeenCalled();
+        });
+
+        it('① 보상 처리 실패는 compensate 단계로 보고한다', async () => {
+            const error = new Error('db failed');
+            relay.postJson.mockResolvedValue({ status: 404 });
+            links.releaseTurnLock.mockRejectedValueOnce(error);
+            await facade.submit(1, '12', payload, Date.now());
+
+            expect(reportKakaoError).toHaveBeenCalledWith(error, 'compensate', {
+                userId: 1,
+                requestId: submittedRequestId(),
+            });
+        });
+
+        it('③ AI 통지로 받은 실패 턴은 ai-internal로 보고한다', async () => {
+            await facade.complete({
+                user_id: '1',
+                request_id: 'r1',
+                outcome: 'FAILED',
+                delivery_status: 'FAIL',
+            });
+
+            expect(reportKakaoAiTurnFailure).toHaveBeenCalledWith('FAIL', {
+                userId: 1,
+                requestId: 'r1',
+            });
+        });
+
+        it('③ 이미 처리된 중복 통지와 성공 턴은 보고하지 않는다', async () => {
+            usage.hasReservation.mockResolvedValueOnce(false);
+            await facade.complete({
+                user_id: '1',
+                request_id: 'r1',
+                outcome: 'FAILED',
+                delivery_status: 'FAIL',
+            });
+            await facade.complete({
+                user_id: '1',
+                request_id: 'r2',
+                outcome: 'SUCCEEDED',
+                delivery_status: 'SUCCESS',
+            });
+
+            expect(reportKakaoAiTurnFailure).not.toHaveBeenCalled();
+        });
+
+        it.each(['FAILED', 'EXPIRED'])(
+            '③ 복구 조회로 확인한 %s 턴도 ai-internal로 보고한다',
+            async (state) => {
+                relay.getJson.mockResolvedValue({
+                    status: 200,
+                    data: { request_id: 'r1', state, delivery_status: 'FAIL' },
+                });
+                links.findPendingTurns.mockResolvedValue([{ userId: 1, turnRequestId: 'r1' }]);
+                await facade.recoverPending();
+
+                expect(reportKakaoAiTurnFailure).toHaveBeenCalledWith('FAIL', {
+                    userId: 1,
+                    requestId: 'r1',
+                });
+            }
+        );
+
+        it('① 사용자 확인 전 실패는 카카오 appUserId로 구분해 보고한다', async () => {
+            const error = new Error('db failed');
+            links.setQueryTimeout.mockRejectedValueOnce(error);
+            await facade.chat({
+                ...payload,
+                userRequest: {
+                    ...payload.userRequest,
+                    user: { properties: { appUserId: 'kakao-1' } },
+                },
+            } as Parameters<KakaoSkillFacade['chat']>[0]);
+
+            expect(reportKakaoError).toHaveBeenCalledWith(error, 'chat', {
+                kakaoAppUserId: 'kakao-1',
+            });
+        });
+
+        it('① 복구 스캔 실패는 recover-scan 단계로 보고한다', async () => {
+            const error = new Error('db down');
+            links.findPendingTurns.mockRejectedValue(error);
+            await facade.recoverPending();
+
+            expect(reportKakaoError).toHaveBeenCalledWith(error, 'recover-scan');
+        });
     });
 });
