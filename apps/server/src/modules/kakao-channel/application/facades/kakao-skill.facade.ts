@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Transactional } from 'typeorm-transactional';
 import { Interval } from '@nestjs/schedule';
 import { randomUUID } from 'node:crypto';
+import * as Sentry from '@sentry/nestjs';
 import { AiAgentUsageService } from 'src/modules/block/application/services/ai-agent-usage.service';
 import { AiExperienceSessionService } from 'src/modules/block/application/services/ai-experience-session.service';
 import { BusinessException } from 'src/common/exceptions/business.exception';
@@ -214,9 +215,11 @@ export class KakaoSkillFacade {
     }
 
     private toResolved(user: User, link: KakaoChannelLink): ResolvedKakaoUser {
-        return user.status === UserStatus.PENDING
-            ? { kind: 'PENDING' }
-            : { kind: 'LINKED', userId: user.id, link };
+        if (user.status === UserStatus.PENDING) return { kind: 'PENDING' };
+
+        // 이 카카오 요청의 Folioo 사용자가 확정되는 유일한 지점. Sentry에는 ID만 보낸다.
+        Sentry.setUser({ id: String(user.id) });
+        return { kind: 'LINKED', userId: user.id, link };
     }
 
     private async activityListResponse(
