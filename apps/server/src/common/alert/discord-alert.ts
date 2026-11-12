@@ -6,6 +6,9 @@ import { createKeyThrottle } from '../utils/key-throttle.util';
 export const DISCORD_ALERT_THROTTLE_MS = 5 * 60 * 1000;
 const DISCORD_TIMEOUT_MS = 3000;
 const MAX_ERROR_TEXT_LENGTH = 300;
+const MAX_PATH_LENGTH = 200;
+/** Discord embed description 제한. 넘으면 Webhook이 메시지를 거부한다. */
+export const DISCORD_DESCRIPTION_LIMIT = 4096;
 const CODE_FENCE = '```';
 /** 굵은 라벨과 값 사이 간격 (전각 공백) */
 const GAP = '\u3000';
@@ -159,7 +162,7 @@ export const buildDiscordMessage = (event: ErrorEvent, sentryOrg?: string): Disc
 
     const lines: string[] = [];
     const path = pathOf(event);
-    if (path) lines.push(`**위치**${GAP}${code(path)}`);
+    if (path) lines.push(`**위치**${GAP}${code(truncate(path, MAX_PATH_LENGTH))}`);
     const stage = stageOf(event);
     if (stage) lines.push(`**단계**${GAP}${STAGE_LABELS[stage] ?? stage} (${code(stage)})`);
     const result = tagOf(event, 'kakao.result') ?? tagOf(event, 'kakao.delivery_status');
@@ -189,7 +192,7 @@ export const buildDiscordMessage = (event: ErrorEvent, sentryOrg?: string): Disc
                 title: kind.title,
                 color: kind.color,
                 url: link,
-                description: lines.join('\n'),
+                description: truncate(lines.join('\n'), DISCORD_DESCRIPTION_LIMIT - 1),
                 footer: {
                     text: [event.environment, event.release, '같은 에러는 5분간 다시 알리지 않음']
                         .filter(Boolean)

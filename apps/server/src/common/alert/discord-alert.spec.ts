@@ -4,6 +4,7 @@ import {
     buildDiscordMessage,
     createDiscordAlert,
     DISCORD_ALERT_THROTTLE_MS,
+    DISCORD_DESCRIPTION_LIMIT,
     type DiscordMessage,
 } from './discord-alert';
 
@@ -119,6 +120,22 @@ describe('discord-alert', () => {
             expect(embedOf(message).description).toContain('Sentry event_id `evt1`');
             expect(embedOf(message).description).toContain('**대상**\u3000로그인 전 요청');
             expect(message.allowed_mentions).toEqual({ parse: [] });
+        });
+
+        it('아주 긴 경로가 와도 설명이 Discord 제한(4096자)을 넘지 않는다', () => {
+            const { description } = embedOf(
+                buildDiscordMessage(
+                    serverError({
+                        request: {
+                            method: 'GET',
+                            url: `https://api.folioo.ai/${'a'.repeat(10_000)}`,
+                        },
+                    })
+                )
+            );
+
+            expect(description.length).toBeLessThanOrEqual(DISCORD_DESCRIPTION_LIMIT);
+            expect(description).toContain('Sentry event_id');
         });
 
         it('긴 에러 메시지는 자르고, 메시지 속 코드 블록 기호는 무력화한다', () => {
