@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/nestjs';
 import { isAiRelayError } from 'src/common/utils/ai-relay-error.util';
+import { SENTRY_COMPONENT, SENTRY_SOURCE } from 'src/common/alert/sentry-tags';
 
 /**
  * 첨삭의 백그라운드 실패를 Sentry에 보낸다.
@@ -30,15 +31,19 @@ export function reportCorrectionError(
     if (isAiRelayError(error)) {
         Sentry.captureMessage('Correction AI relay failed', {
             level: 'error',
-            tags: { component: 'correction', source: 'ai-relay', 'correction.stage': stage },
-            fingerprint: ['correction', 'ai-relay', stage],
+            tags: {
+                component: SENTRY_COMPONENT.CORRECTION,
+                source: SENTRY_SOURCE.AI_RELAY,
+                'correction.stage': stage,
+            },
+            fingerprint: [SENTRY_COMPONENT.CORRECTION, SENTRY_SOURCE.AI_RELAY, stage],
             ...eventContext(correctionId, userId),
         });
         return;
     }
 
     Sentry.captureException(error, {
-        tags: { component: 'correction', 'correction.stage': stage },
+        tags: { component: SENTRY_COMPONENT.CORRECTION, 'correction.stage': stage },
         ...eventContext(correctionId, userId),
     });
 }
@@ -48,11 +53,11 @@ export function reportCorrectionAiPdfFailure(correctionId: number, userId: numbe
     Sentry.captureMessage('Correction PDF extraction failed', {
         level: 'error',
         tags: {
-            component: 'correction',
-            source: 'ai-internal',
+            component: SENTRY_COMPONENT.CORRECTION,
+            source: SENTRY_SOURCE.AI_INTERNAL,
             'correction.stage': 'pdf-extraction',
         },
-        fingerprint: ['correction', 'ai-internal', 'pdf-extraction'],
+        fingerprint: [SENTRY_COMPONENT.CORRECTION, SENTRY_SOURCE.AI_INTERNAL, 'pdf-extraction'],
         ...eventContext(correctionId, userId),
     });
 }

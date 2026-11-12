@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/nestjs';
 import { isAiRelayError } from 'src/common/utils/ai-relay-error.util';
 import { createKeyThrottle } from 'src/common/utils/key-throttle.util';
+import { SENTRY_COMPONENT, SENTRY_SOURCE } from 'src/common/alert/sentry-tags';
 
 /**
  * 카카오 챗봇 실패를 Sentry에 보낸다 (FO-101 결정).
@@ -64,7 +65,7 @@ export function reportKakaoError(error: unknown, stage: KakaoStage, actor: Kakao
     if (!shouldReport(`server:${stage}:${actorKey(actor)}`)) return;
 
     Sentry.captureException(error, {
-        tags: { component: 'kakao', 'kakao.stage': stage },
+        tags: { component: SENTRY_COMPONENT.KAKAO, 'kakao.stage': stage },
         ...eventContext(actor),
     });
 }
@@ -80,12 +81,12 @@ export function reportKakaoAiRelayFailure(
     Sentry.captureMessage('Kakao AI relay failed', {
         level: 'error',
         tags: {
-            component: 'kakao',
-            source: 'ai-relay',
+            component: SENTRY_COMPONENT.KAKAO,
+            source: SENTRY_SOURCE.AI_RELAY,
             'kakao.stage': stage,
             'kakao.result': result,
         },
-        fingerprint: ['kakao', 'ai-relay', stage, result],
+        fingerprint: [SENTRY_COMPONENT.KAKAO, SENTRY_SOURCE.AI_RELAY, stage, result],
         ...eventContext(actor),
     });
 }
@@ -97,11 +98,11 @@ export function reportKakaoAiTurnFailure(deliveryStatus: string, actor: KakaoAct
     Sentry.captureMessage('Kakao AI turn failed', {
         level: 'error',
         tags: {
-            component: 'kakao',
-            source: 'ai-internal',
+            component: SENTRY_COMPONENT.KAKAO,
+            source: SENTRY_SOURCE.AI_INTERNAL,
             'kakao.delivery_status': deliveryStatus,
         },
-        fingerprint: ['kakao', 'ai-internal', deliveryStatus],
+        fingerprint: [SENTRY_COMPONENT.KAKAO, SENTRY_SOURCE.AI_INTERNAL, deliveryStatus],
         ...eventContext(actor),
     });
 }
@@ -117,11 +118,11 @@ export function reportKakaoLinkFailure(httpStatus: number | undefined, actor: Ka
     Sentry.captureMessage('Kakao link callback failed', {
         level: 'error',
         tags: {
-            component: 'kakao',
+            component: SENTRY_COMPONENT.KAKAO,
             'kakao.stage': 'link-callback',
             'kakao.result': status,
         },
-        fingerprint: ['kakao', 'link-callback', status],
+        fingerprint: [SENTRY_COMPONENT.KAKAO, 'link-callback', status],
         ...eventContext(actor),
     });
 }

@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import type { ErrorEvent } from '@sentry/nestjs';
 import { createKeyThrottle } from '../utils/key-throttle.util';
+import { SENTRY_COMPONENT, SENTRY_SOURCE, type SentryComponent } from './sentry-tags';
 
 /** 같은 에러는 5분에 한 번만 디스코드로 보낸다. 자세한 건수는 Sentry에서 본다. */
 export const DISCORD_ALERT_THROTTLE_MS = 5 * 60 * 1000;
@@ -28,15 +29,15 @@ const ALERT_KINDS = {
 
 /** 200으로 응답하거나 응답 뒤에 실패해서, 전역 예외 필터 대신 직접 보고하는 기능들 */
 const COMPONENT_KINDS: Record<
-    string,
+    SentryComponent,
     { server: AlertKind; aiRelay: AlertKind; aiInternal: AlertKind }
 > = {
-    kakao: {
+    [SENTRY_COMPONENT.KAKAO]: {
         server: ALERT_KINDS.kakaoServer,
         aiRelay: ALERT_KINDS.kakaoAiRelay,
         aiInternal: ALERT_KINDS.kakaoAiInternal,
     },
-    correction: {
+    [SENTRY_COMPONENT.CORRECTION]: {
         server: ALERT_KINDS.correctionServer,
         aiRelay: ALERT_KINDS.correctionAiRelay,
         aiInternal: ALERT_KINDS.correctionAiInternal,
@@ -91,11 +92,13 @@ const tagOf = (event: ErrorEvent, name: string): string | undefined => {
 };
 
 const kindOf = (event: ErrorEvent): AlertKind => {
-    const component = COMPONENT_KINDS[tagOf(event, 'component') ?? ''];
+    const component = COMPONENT_KINDS[tagOf(event, 'component') as SentryComponent] as
+        | (typeof COMPONENT_KINDS)[SentryComponent]
+        | undefined;
     if (!component) return ALERT_KINDS.server;
     const source = tagOf(event, 'source');
-    if (source === 'ai-relay') return component.aiRelay;
-    if (source === 'ai-internal') return component.aiInternal;
+    if (source === SENTRY_SOURCE.AI_RELAY) return component.aiRelay;
+    if (source === SENTRY_SOURCE.AI_INTERNAL) return component.aiInternal;
     return component.server;
 };
 
