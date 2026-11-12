@@ -191,3 +191,78 @@ async def test_second_conflict_is_final_commit_conflict():
         await commit_changes(state, client=client)
 
     assert exc_info.value.code == "commit_conflict"
+
+
+def _refresh_with_contents(contents: dict[str, str]):
+    """block 별칭은 그대로 두고 내용만 바뀐 최신 맵을 돌려주는 refresh 대역."""
+
+    async def refresh_map(state: dict) -> dict:
+        return {**state, "map_version": 9, "block_id_to_content": contents}
+
+    return refresh_map
+
+
+@pytest.mark.asyncio
+async def test_conflict_restarts_from_structure_when_user_edited_the_update_target():
+    """AI가 update하려던 칸을 그사이 사용자가 고쳤으면 이전 update를 재사용하지 않는다.
+
+    validate부터 재실행하면 옛 버전 기준 update가 그대로 다시 커밋돼 사용자가 고친
+    내용을 덮어썼다.
+    """
+    state = valid_state() | {"block_id_to_content": {"300": "기존 문장"}}
+    client = ClientStub(MapVersionConflictError(current_map_version=9))
+
+    result = await commit_changes(
+        state, client=client, refresh_map=_refresh_with_contents({"300": "사용자가 고친 문장"})
+    )
+
+    assert next_node(result) == "structure"
+
+
+@pytest.mark.asyncio
+async def test_conflict_restarts_from_structure_when_user_filled_the_empty_update_target():
+    state = valid_state() | {"block_id_to_content": {}}
+    client = ClientStub(MapVersionConflictError(current_map_version=9))
+
+    result = await commit_changes(
+        state, client=client, refresh_map=_refresh_with_contents({"300": "사용자가 채운 내용"})
+    )
+
+    assert next_node(result) == "structure"
+
+
+@pytest.mark.asyncio
+async def test_conflict_reuses_updates_when_only_other_blocks_changed():
+    """다른 칸만 바뀌어 버전만 올라간 충돌은 지금처럼 validate부터 재실행한다."""
+    state = valid_state() | {"block_id_to_content": {"300": "기존 문장", "200": "옛 내용"}}
+    client = ClientStub(MapVersionConflictError(current_map_version=9))
+
+    result = await commit_changes(
+        state,
+        client=client,
+        refresh_map=_refresh_with_contents({"300": "기존 문장", "200": "다른 칸 수정"}),
+    )
+
+    assert next_node(result) == "validate"
+
+
+@pytest.mark.asyncio
+async def test_conflict_restarts_from_structure_when_user_edited_the_gap_update_target():
+    """gap 답변 update는 기존 내용에 답변을 이어 붙인 것이라, 기존 내용이 바뀌면 다시 만든다."""
+    state = valid_state() | {
+        "structured_items": [valid_state()["structured_items"][0]],
+        "gap_update_item": {
+            "item_id": "gap_update:300",
+            "action": "update",
+            "target_ref": "b_2",
+            "text": "기존 문장\n답변",
+        },
+        "block_id_to_content": {"300": "기존 문장"},
+    }
+    client = ClientStub(MapVersionConflictError(current_map_version=9))
+
+    result = await commit_changes(
+        state, client=client, refresh_map=_refresh_with_contents({"300": "사용자가 고친 문장"})
+    )
+
+    assert next_node(result) == "structure"
