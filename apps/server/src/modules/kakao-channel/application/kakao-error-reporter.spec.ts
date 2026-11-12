@@ -144,6 +144,40 @@ describe('kakao-error-reporter', () => {
         });
     });
 
+    describe('카카오 계정 연결 콜백 실패', () => {
+        it('예외 원문 없이 HTTP 상태와 사용자 ID만 보내고, 같은 사용자 반복은 5분에 한 번', () => {
+            const { reportKakaoLinkFailure } = loadReporter();
+
+            reportKakaoLinkFailure(400, { userId: 3 });
+            reportKakaoLinkFailure(400, { userId: 3 });
+            reportKakaoLinkFailure(undefined, { userId: 4 });
+
+            expect(Sentry.captureException).not.toHaveBeenCalled();
+            expect((Sentry.captureMessage as jest.Mock).mock.calls).toEqual([
+                [
+                    'Kakao link callback failed',
+                    {
+                        level: 'error',
+                        tags: {
+                            component: 'kakao',
+                            'kakao.stage': 'link-callback',
+                            'kakao.result': '400',
+                        },
+                        fingerprint: ['kakao', 'link-callback', '400'],
+                        user: { id: '3' },
+                    },
+                ],
+                [
+                    'Kakao link callback failed',
+                    expect.objectContaining({
+                        fingerprint: ['kakao', 'link-callback', 'NO_RESPONSE'],
+                        user: { id: '4' },
+                    }),
+                ],
+            ]);
+        });
+    });
+
     describe('③ AI 서버 내부 실패', () => {
         it('요청 scope가 없어도 사용자 ID를 이벤트에 직접 넣고 전달 상태별로 묶는다', () => {
             const { reportKakaoAiTurnFailure } = loadReporter();

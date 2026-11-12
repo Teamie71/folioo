@@ -1,6 +1,5 @@
 import * as Sentry from '@sentry/nestjs';
-import { BusinessException } from 'src/common/exceptions/business.exception';
-import { ErrorCode } from 'src/common/exceptions/error-code.enum';
+import { isAiRelayError } from 'src/common/utils/ai-relay-error.util';
 import { createKeyThrottle } from 'src/common/utils/key-throttle.util';
 
 /**
@@ -27,7 +26,8 @@ export type KakaoStage =
     | 'submit'
     | 'compensate'
     | 'recover-turn'
-    | 'recover-scan';
+    | 'recover-scan'
+    | 'link-callback';
 
 export type KakaoAiRelayResult = 'UNKNOWN' | 'REJECTED' | 'ERROR';
 
@@ -40,18 +40,7 @@ export type KakaoActor = {
     requestId?: string;
 };
 
-const AI_RELAY_ERROR_CODES: ReadonlySet<string> = new Set([
-    ErrorCode.AI_RELAY_REQUEST_FAILED,
-    ErrorCode.INTERVIEW_AI_RELAY_FAILED,
-]);
-
 const shouldReport = createKeyThrottle(KAKAO_REPORT_THROTTLE_MS);
-
-function isAiRelayError(error: unknown): boolean {
-    if (!(error instanceof BusinessException)) return false;
-    const { errorCode } = error.getResponse() as { errorCode?: string };
-    return errorCode !== undefined && AI_RELAY_ERROR_CODES.has(errorCode);
-}
 
 function actorKey({ userId, kakaoAppUserId }: KakaoActor): string {
     if (userId !== undefined) return `user:${userId}`;
@@ -113,6 +102,26 @@ export function reportKakaoAiTurnFailure(deliveryStatus: string, actor: KakaoAct
             'kakao.delivery_status': deliveryStatus,
         },
         fingerprint: ['kakao', 'ai-internal', deliveryStatus],
+        ...eventContext(actor),
+    });
+}
+
+/**
+ * 카카오 계정 연결 콜백에서 카카오 OAuth 호출이 실패함.
+ * 카카오 API 예외에는 인가 코드·client_secret·액세스 토큰이 들어갈 수 있어 예외 원문 대신 HTTP 상태만 보낸다.
+ */
+export function reportKakaoLinkFailure(httpStatus: number | undefined, actor: KakaoActor): void {
+    const status = httpStatus === undefined ? 'NO_RESPONSE' : String(httpStatus);
+    if (!shouldReport(`link-callback:${status}:${actorKey(actor)}`)) return;
+
+    Sentry.captureMessage('Kakao link callback failed', {
+        level: 'error',
+        tags: {
+            component: 'kakao',
+            'kakao.stage': 'link-callback',
+            'kakao.result': status,
+        },
+        fingerprint: ['kakao', 'link-callback', status],
         ...eventContext(actor),
     });
 }

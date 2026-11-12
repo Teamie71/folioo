@@ -5,6 +5,7 @@ import type { ExternalPortfolioUpdateInput } from 'src/modules/portfolio/applica
 import { CorrectionItemService } from 'src/modules/portfolio-correction/application/services/correction-item.service';
 import { CorrectionPortfolioSelectionService } from 'src/modules/portfolio-correction/application/services/correction-portfolio-selection.service';
 import { PortfolioCorrectionService } from 'src/modules/portfolio-correction/application/services/portfolio-correction.service';
+import { reportCorrectionAiPdfFailure } from 'src/modules/portfolio-correction/application/correction-error-reporter';
 import { PdfExtractionStatus } from 'src/modules/portfolio-correction/domain/enums/pdf-extraction-status.enum';
 import { CorrectionItem } from 'src/modules/portfolio-correction/domain/correction-item.entity';
 import {
@@ -53,6 +54,7 @@ export class InternalCorrectionResultFacade {
                     body.errorMessage ?? ''
                 }`
             );
+            reportCorrectionAiPdfFailure(correctionId, correction.user.id);
             await this.portfolioCorrectionService.updatePdfExtractionStatus(
                 correctionId,
                 PdfExtractionStatus.FAILED
