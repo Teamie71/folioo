@@ -23,6 +23,16 @@ WORKER_LEASE_SECONDS = 60
 RECOVERY_INTERVAL_SECONDS = 15
 """복구 루프 주기"""
 
+COMMIT_UNKNOWN_SETTLE_SECONDS = 120
+"""`expires_at` 뒤 이 시간이 지나기 전에는 "커밋 없음" 조회 결과로 COMMIT_UNKNOWN 을 실패로
+확정하지 않는다.
+
+기한으로 끊긴 커밋 호출은 shield 되어 계속 돈다. 커밋 HTTP 호출 하나는 연결·쓰기·읽기·풀
+대기 타임아웃을 합쳐 25초 안팎이고, `unknown_slot_id` 면 카탈로그 갱신 뒤 한 번 더 보낸다.
+메인 서버 조회(`GET commit/:requestId`)는 진행 중 여부를 알려 주지 않으므로, 그 호출들이 끝날
+시간을 넉넉히 기다린다. "커밋됨"은 기다리지 않고 바로 확정한다.
+"""
+
 RETENTION_HOURS = 48
 """종결된 턴 기록 보존 시간 (명세: 최소 24시간)"""
 

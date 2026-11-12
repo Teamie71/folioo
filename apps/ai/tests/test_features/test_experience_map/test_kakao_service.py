@@ -20,6 +20,7 @@ from features.experience_map.errors import (
     SessionNotFoundError,
 )
 from features.experience_map.kakao import service as kakao_service
+from features.experience_map.kakao.config import COMMIT_UNKNOWN_SETTLE_SECONDS
 from features.experience_map.kakao.schemas import KakaoTurnRequest
 from features.experience_map.kakao.service import KakaoTurnService
 from features.experience_map.kakao.store import KakaoTurnStore
@@ -415,13 +416,69 @@ async def test_unconfirmed_commit_is_not_refunded_and_resolved_later(clean_db, u
     assert h.notifier.usage_calls == 0
 
     # 결과가 확인되면 확정하고 그때 정리한다. 콜백은 다시 보내지 않는다.
+    # "커밋 없음"은 진행 중이던 커밋이 끝날 시간이 지난 뒤에만 확정한다.
     h.main_client.result = False
+    _advance_past_commit_settle(h, row)
     await h.service.recover_once()
     resolved = await h.store.get(row.request_id)
     assert resolved.state == "FAILED"
     assert h.notifier.usage_calls == 1
     assert h.notifier.complete_calls[-1]["outcome"] == "FAILED"
     assert len(h.sent) == 1
+
+
+def _advance_past_commit_settle(h: Harness, row) -> None:
+    """서비스 시계를 커밋 결과 확정 대기 시간 뒤로 옮긴다."""
+    settled = row.expires_at + timedelta(seconds=COMMIT_UNKNOWN_SETTLE_SECONDS + 1)
+    h.service._now = lambda: settled
+
+
+@pytest.mark.asyncio
+async def test_commit_cut_by_deadline_is_not_failed_before_it_can_finish(clean_db, user_id):
+    """기한으로 끊긴 커밋은 shield 되어 계속 돈다. 복구 루프 첫 회차의 "커밋 없음"을 믿지 않는다.
+
+    첫 회차에 바로 FAILED로 확정해 실패 안내·사용 횟수 제외를 했는데, 그 뒤 진행 중이던
+    커밋이 실제로 반영됐다.
+    """
+    h = Harness(
+        clean_db,
+        user_id,
+        events=[NodeStatusEvent(node="commit", status="running")],
+        hang_after_events=True,
+    )
+    row = await h.accept_and_run(h.request(expires_in=5.3))
+    assert row.state == "COMMIT_UNKNOWN"
+
+    h.main_client.result = False  # 아직 반영 전이라 조회하면 false
+    await h.service.recover_once()
+
+    assert (await h.store.get(row.request_id)).state == "COMMIT_UNKNOWN"
+    assert h.notifier.usage_calls == 0
+
+    h.main_client.result = True  # 진행 중이던 커밋이 반영됐다
+    await h.service.recover_once()
+
+    assert (await h.store.get(row.request_id)).state == "SUCCEEDED"
+    assert h.notifier.usage_calls == 0
+    assert h.notifier.complete_calls[-1]["outcome"] == "SUCCEEDED"
+
+
+@pytest.mark.asyncio
+async def test_commit_cut_by_deadline_is_failed_after_settle_time(clean_db, user_id):
+    h = Harness(
+        clean_db,
+        user_id,
+        events=[NodeStatusEvent(node="commit", status="running")],
+        hang_after_events=True,
+    )
+    row = await h.accept_and_run(h.request(expires_in=5.3))
+
+    h.main_client.result = False
+    _advance_past_commit_settle(h, row)
+    await h.service.recover_once()
+
+    assert (await h.store.get(row.request_id)).state == "FAILED"
+    assert h.notifier.usage_calls == 1
 
 
 @pytest.mark.asyncio
