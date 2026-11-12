@@ -219,8 +219,27 @@ describe('디스코드 알림 스위치', () => {
         ).toBe(1);
     });
 
-    it('Webhook URL이 없으면 보내지 않는다', () => {
+    it('Webhook URL이 없으면 보내지 않고, prod면 시작할 때 경고를 남긴다', () => {
+        const warn = jest.fn();
+        jest.doMock('@nestjs/common', () => ({ Logger: { warn } }));
+
         expect(sendAndCount({ APP_PROFILE: 'prod', DISCORD_WEBHOOK_URL: undefined })).toBe(0);
+
+        expect(warn).toHaveBeenCalledWith(
+            'DISCORD_WEBHOOK_URL is not set. Discord alerts are disabled in prod.',
+            'DiscordAlert'
+        );
+        jest.dontMock('@nestjs/common');
+    });
+
+    it('dev는 Webhook URL이 없어도 경고하지 않는다', () => {
+        const warn = jest.fn();
+        jest.doMock('@nestjs/common', () => ({ Logger: { warn } }));
+
+        sendAndCount({ APP_PROFILE: 'dev', DISCORD_WEBHOOK_URL: undefined });
+
+        expect(warn).not.toHaveBeenCalled();
+        jest.dontMock('@nestjs/common');
     });
 });
 

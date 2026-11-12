@@ -152,9 +152,11 @@ const isUntracedPath = (urlPath: string): boolean => {
 };
 
 // 이 파일은 Sentry.init 전에 실행되므로 `@nestjs/common`을 미리 import하면 Nest 계측이 빠진다.
-// 경고가 필요할 때만 불러온다 (그때는 이미 init이 끝났다).
+// 경고가 필요할 때만 불러온다. 시작 경고는 init 직후, 전송 실패 경고는 요청 처리 중에 불린다.
 const warnLater = (context: string, message: string): void => {
-    void import('@nestjs/common').then(({ Logger }) => Logger.warn(message, context));
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Logger } = require('@nestjs/common') as typeof import('@nestjs/common');
+    Logger.warn(message, context);
 };
 
 // 디스코드 알림은 prod만 보낸다. 다른 환경은 테스트할 때만 DISCORD_ALERT_ENABLED=true로 켠다.
@@ -219,3 +221,12 @@ Sentry.init({
             ? null
             : scrubTransaction(event),
 });
+
+// prod인데 Webhook이 없으면 알림만 조용히 빠지므로 시작할 때 알린다 (Sentry 수집은 계속된다).
+// Sentry.init 뒤에 불러야 @nestjs/common 계측이 유지된다.
+if (appProfile === 'prod' && !discordWebhookUrl) {
+    warnLater(
+        'DiscordAlert',
+        'DISCORD_WEBHOOK_URL is not set. Discord alerts are disabled in prod.'
+    );
+}
