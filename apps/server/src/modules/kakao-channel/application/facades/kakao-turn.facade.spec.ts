@@ -345,6 +345,17 @@ describe('Kakao turn contract', () => {
             });
         });
 
+        it('① error 로그에도 사용자 ID와 request_id를 속성으로 남긴다 (AI 서버 로그와 맞춰 보기용)', async () => {
+            const logError = jest.spyOn(Logger.prototype, 'error');
+            sessions.getOrCreate.mockRejectedValue(new Error('session failed'));
+            await facade.submit(1, '12', payload, Date.now());
+
+            expect(logError).toHaveBeenCalledWith('Kakao turn preparation failed', {
+                userId: 1,
+                requestId: expect.any(String) as string,
+            });
+        });
+
         it('일일 한도 초과는 보고하지 않는다', async () => {
             usage.consume.mockRejectedValue(
                 new BusinessException(ErrorCode.EXPERIENCE_MAP_DAILY_LIMIT_EXCEEDED)

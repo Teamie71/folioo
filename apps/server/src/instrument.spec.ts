@@ -18,6 +18,7 @@ type InstrumentOptions = {
     enabled: boolean;
     environment: string;
     release: string;
+    sampleRate: number;
     beforeSend: (event: RequestEvent) => RequestEvent | null;
     beforeSendTransaction: (event: RequestEvent) => RequestEvent | null;
     beforeSendLog: (log: { level: string; message: string }) => unknown;
@@ -229,5 +230,13 @@ describe('릴리스', () => {
         expect(loadOptions({ SENTRY_RELEASE: undefined }).release).toMatch(
             /^folioo-server@\d+\.\d+\.\d+/
         );
+    });
+});
+
+describe('에러 샘플링', () => {
+    it('dev는 에러를 절반만 보내고, prod와 local은 전부 보낸다', () => {
+        expect(loadOptions({ APP_PROFILE: 'dev' }).sampleRate).toBe(0.5);
+        expect(loadOptions({ APP_PROFILE: 'prod' }).sampleRate).toBe(1);
+        expect(loadOptions({ APP_PROFILE: 'local' }).sampleRate).toBe(1);
     });
 });

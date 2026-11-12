@@ -78,6 +78,9 @@ Sentry.init({
     // 릴리스: 배포 환경이 SENTRY_RELEASE(예: folioo-server@<git SHA>)를 넣으면 그 값을, 없으면 package.json 버전을 쓴다.
     release: process.env.SENTRY_RELEASE || `folioo-server@${version}`,
 
+    // 에러 샘플링: dev는 절반만 보낸다 (Errors 월 5k를 prod와 같이 쓰므로). prod·local은 전부.
+    sampleRate: appProfile === 'dev' ? 0.5 : 1.0,
+
     // Tracing 샘플링 (prod 30%)
     tracesSampleRate: appProfile === 'prod' ? 0.3 : 1.0,
 

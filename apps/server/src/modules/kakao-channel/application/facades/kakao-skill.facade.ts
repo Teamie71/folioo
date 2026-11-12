@@ -403,7 +403,7 @@ export class KakaoSkillFacade {
                 return textResponse(KAKAO_MESSAGES.DAILY_LIMIT);
             }
             reportKakaoError(error, 'submit', { userId, requestId });
-            this.logger.error('Kakao turn preparation failed');
+            this.logger.error('Kakao turn preparation failed', { userId, requestId });
             return this.failureResponse();
         }
     }
@@ -479,7 +479,7 @@ export class KakaoSkillFacade {
             this.rejected.delete(requestId);
         } catch (error) {
             reportKakaoError(error, 'compensate', { userId, requestId });
-            this.logger.error('Kakao rejected turn compensation failed');
+            this.logger.error('Kakao rejected turn compensation failed', { userId, requestId });
         }
     }
 
@@ -525,7 +525,10 @@ export class KakaoSkillFacade {
                             userId: link.userId,
                             requestId: link.turnRequestId ?? undefined,
                         });
-                        this.logger.error('Kakao turn recovery failed');
+                        this.logger.error('Kakao turn recovery failed', {
+                            userId: link.userId,
+                            requestId: link.turnRequestId,
+                        });
                     }
                 })
             );
