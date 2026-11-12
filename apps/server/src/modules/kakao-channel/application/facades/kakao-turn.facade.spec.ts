@@ -1,5 +1,6 @@
 jest.mock('typeorm-transactional', () => ({ Transactional: () => () => undefined }));
 jest.mock('../kakao-error-reporter');
+jest.mock('../kakao-recovery-monitor');
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { BusinessException } from 'src/common/exceptions/business.exception';
@@ -15,6 +16,7 @@ import { KakaoSkillFacade } from './kakao-skill.facade';
 import { KakaoTurnService } from '../services/kakao-turn.service';
 import { KakaoChannelLinkService } from '../services/kakao-channel-link.service';
 import { KAKAO_MESSAGES } from '../kakao-messages';
+import { checkInKakaoRecovery } from '../kakao-recovery-monitor';
 import { textResponse } from '../kakao-skill-response';
 import {
     reportKakaoAiRelayFailure,
@@ -448,6 +450,22 @@ describe('Kakao turn contract', () => {
             await facade.recoverPending();
 
             expect(reportKakaoError).toHaveBeenCalledWith(error, 'recover-scan');
+        });
+    });
+
+    describe('Cron Monitor 체크인', () => {
+        it('복구 작업이 끝까지 돌면 ok로 체크인한다', async () => {
+            await facade.recoverPending();
+
+            expect(checkInKakaoRecovery).toHaveBeenCalledWith('ok');
+        });
+
+        it('복구 스캔이 실패하면 error로 체크인한다', async () => {
+            links.findPendingTurns.mockRejectedValue(new Error('db down'));
+            await facade.recoverPending();
+
+            expect(checkInKakaoRecovery).toHaveBeenCalledWith('error');
+            expect(checkInKakaoRecovery).not.toHaveBeenCalledWith('ok');
         });
     });
 });

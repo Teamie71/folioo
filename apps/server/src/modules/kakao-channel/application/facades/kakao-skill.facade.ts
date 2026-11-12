@@ -27,6 +27,7 @@ import {
     reportKakaoAiTurnFailure,
     reportKakaoError,
 } from '../kakao-error-reporter';
+import { checkInKakaoRecovery } from '../kakao-recovery-monitor';
 import {
     activityQuickReplies,
     linkCardResponse,
@@ -532,9 +533,11 @@ export class KakaoSkillFacade {
                     }
                 })
             );
+            checkInKakaoRecovery('ok');
         } catch (error) {
             reportKakaoError(error, 'recover-scan');
             this.logger.error('Kakao pending turn scan failed');
+            checkInKakaoRecovery('error');
         } finally {
             this.recovering = false;
         }
