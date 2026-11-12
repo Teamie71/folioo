@@ -1,6 +1,10 @@
 jest.mock('@sentry/nestjs', () => ({
     init: jest.fn(),
     httpIntegration: jest.fn((options: unknown) => options),
+    nativeNodeFetchIntegration: jest.fn((options: unknown) => ({
+        ...(options as object),
+        fetch: true,
+    })),
 }));
 
 // 테스트가 실제 apps/server/.env를 읽지 않도록 기본은 "파일 없음"으로 둔다.
@@ -27,6 +31,7 @@ type InstrumentOptions = {
     beforeSend: (event: RequestEvent) => RequestEvent | null;
     beforeSendTransaction: (event: RequestEvent) => RequestEvent | null;
     beforeSendLog: (log: { level: string; message: string }) => unknown;
+    beforeBreadcrumb: (breadcrumb: { data?: Record<string, unknown> }) => unknown;
     integrations: {
         ignoreIncomingRequests: (urlPath: string) => boolean;
         ignoreOutgoingRequests: (url: string) => boolean;
@@ -404,5 +409,28 @@ describe('트레이스 span·로그 메시지의 쿼리 값 제거', () => {
         ).toBe(
             '⚠️ [Client Error] /auth/kakao/callback?code=[Filtered]&state=[Filtered]: 유효하지 않은 사용자입니다.'
         );
+    });
+});
+
+describe('디스코드 Webhook URL 노출 방지', () => {
+    const WEBHOOK = 'https://discord.com/api/webhooks/1570429508836655247/secret-token';
+
+    it('fetch·http 계측 모두 Webhook 요청을 span·breadcrumb으로 남기지 않는다', () => {
+        const { integrations } = loadOptions();
+
+        expect(integrations[0].ignoreOutgoingRequests(WEBHOOK)).toBe(true);
+        expect(integrations[1].ignoreOutgoingRequests(WEBHOOK)).toBe(true);
+        expect(
+            integrations[1].ignoreOutgoingRequests('https://discordapp.com/api/webhooks/1/t')
+        ).toBe(true);
+        expect(integrations[1].ignoreOutgoingRequests('https://ai.folioo.ai/api/v1/x')).toBe(false);
+    });
+
+    it('Webhook URL이 담긴 breadcrumb은 버린다', () => {
+        const { beforeBreadcrumb } = loadOptions();
+        const other = { data: { url: 'https://ai.folioo.ai/api/v1/x' } };
+
+        expect(beforeBreadcrumb({ data: { url: WEBHOOK } })).toBeNull();
+        expect(beforeBreadcrumb(other)).toBe(other);
     });
 });

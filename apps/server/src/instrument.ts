@@ -151,6 +151,11 @@ const isUntracedPath = (urlPath: string): boolean => {
     return path === '/health' || path.startsWith('/docs');
 };
 
+// 디스코드 Webhook URL은 경로에 토큰이 들어 있어(/api/webhooks/{id}/{token}) URL 자체가 비밀이다.
+// 알림 전송(fetch)이 trace의 http.client span·breadcrumb으로 남지 않게 한다. 쿼리 마스킹으로는 막히지 않는다.
+const DISCORD_WEBHOOK_URL_PATTERN = /discord(app)?\.com\/api\/webhooks\//;
+const isDiscordWebhookUrl = (url: string): boolean => DISCORD_WEBHOOK_URL_PATTERN.test(url);
+
 // 이 파일은 Sentry.init 전에 실행되므로 `@nestjs/common`을 미리 import하면 Nest 계측이 빠진다.
 // 경고가 필요할 때만 불러온다. 시작 경고는 init 직후, 전송 실패 경고는 요청 처리 중에 불린다.
 const warnLater = (context: string, message: string): void => {
@@ -208,9 +213,20 @@ Sentry.init({
                 isOAuthCallbackPath(path) ||
                 isUntracedPath(path),
             ignoreOutgoingRequests: (url) =>
-                url.includes('/kakao/turns') || url.includes('/bot-api.kakao.com/'),
+                url.includes('/kakao/turns') ||
+                url.includes('/bot-api.kakao.com/') ||
+                isDiscordWebhookUrl(url),
+        }),
+        // fetch 요청은 httpIntegration이 아니라 이 integration이 계측한다 (디스코드 알림은 fetch로 보낸다).
+        Sentry.nativeNodeFetchIntegration({
+            ignoreOutgoingRequests: (url) => isDiscordWebhookUrl(url),
         }),
     ],
+    // 계측 밖에서 남는 breadcrumb에도 Webhook URL이 실리지 않게 한 번 더 거른다.
+    beforeBreadcrumb: (breadcrumb) =>
+        typeof breadcrumb.data?.url === 'string' && isDiscordWebhookUrl(breadcrumb.data.url)
+            ? null
+            : breadcrumb,
     beforeSend: (event) => {
         const scrubbed = scrubRequest(event);
         sendDiscordAlert?.(scrubbed);
