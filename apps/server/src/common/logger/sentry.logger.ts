@@ -26,7 +26,10 @@ const toMessage = (message: unknown): string => {
     if (typeof message === 'string') return message;
     if (message instanceof Error) return message.message;
     try {
-        return JSON.stringify(message);
+        // 객체를 메시지로 넘겨도 속성과 같은 기준으로 민감한 키를 뺀다 (중첩 객체 포함).
+        return JSON.stringify(message, (key, value: unknown) =>
+            key && SENSITIVE_KEY_PATTERN.test(key) ? undefined : value
+        );
     } catch {
         return String(message);
     }

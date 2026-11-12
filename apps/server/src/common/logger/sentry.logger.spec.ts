@@ -86,6 +86,17 @@ describe('SentryLogger', () => {
         expect(message.endsWith('…(truncated)')).toBe(true);
     });
 
+    it('객체를 메시지로 넘겨도 민감한 키는 빼고 보낸다 (중첩 포함)', () => {
+        new Logger('Any').warn({
+            event: 'refresh',
+            accessToken: 'secret-token',
+            nested: { password: 'pw', userId: 3 },
+        });
+
+        const [message] = (Sentry.logger.warn as jest.Mock).mock.calls[0] as [string];
+        expect(JSON.parse(message)).toEqual({ event: 'refresh', nested: { userId: 3 } });
+    });
+
     it('Nest 부트스트랩 로그(InstanceLoader 등)는 보내지 않는다', () => {
         new Logger('InstanceLoader').log('AppModule dependencies initialized');
         new Logger('RouterExplorer').log('Mapped {/health, GET} route');
