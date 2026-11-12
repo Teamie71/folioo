@@ -1,28 +1,126 @@
 jest.mock('@sentry/nestjs', () => ({
     init: jest.fn(),
     httpIntegration: jest.fn((options: unknown) => options),
+    nativeNodeFetchIntegration: jest.fn((options: unknown) => ({
+        ...(options as object),
+        fetch: true,
+    })),
 }));
-import * as Sentry from '@sentry/nestjs';
-import './instrument';
+
+// 테스트가 실제 apps/server/.env를 읽지 않도록 기본은 "파일 없음"으로 둔다.
+let mockEnvFileExists = false;
+jest.mock('node:fs', () => ({
+    ...jest.requireActual<typeof import('node:fs')>('node:fs'),
+    existsSync: () => mockEnvFileExists,
+}));
+
+type RequestEvent = {
+    request?: {
+        url?: string;
+        data?: unknown;
+        query_string?: unknown;
+        headers?: Record<string, string>;
+    };
+};
+
+type InstrumentOptions = {
+    enabled: boolean;
+    environment: string;
+    release: string;
+    sampleRate: number;
+    beforeSend: (event: RequestEvent) => RequestEvent | null;
+    beforeSendTransaction: (event: RequestEvent) => RequestEvent | null;
+    beforeSendLog: (log: { level: string; message: string }) => unknown;
+    beforeBreadcrumb: (breadcrumb: { data?: Record<string, unknown> }) => unknown;
+    integrations: {
+        ignoreIncomingRequests: (urlPath: string) => boolean;
+        ignoreOutgoingRequests: (url: string) => boolean;
+    }[];
+};
+
+const ORIGINAL_ENV = process.env;
+
+/** 주어진 환경변수로 instrument.ts를 새로 불러와 Sentry.init에 넘긴 옵션을 돌려준다. */
+function loadOptions(env: Record<string, string | undefined> = {}): InstrumentOptions {
+    process.env = { ...ORIGINAL_ENV, ...env };
+    let options: InstrumentOptions | undefined;
+    jest.isolateModules(() => {
+        const Sentry = jest.requireMock<{ init: jest.Mock }>('@sentry/nestjs');
+        jest.requireActual('./instrument');
+        options = (Sentry.init.mock.calls as unknown[][])[0][0] as InstrumentOptions;
+    });
+    return options as InstrumentOptions;
+}
+
+afterEach(() => {
+    process.env = ORIGINAL_ENV;
+    mockEnvFileExists = false;
+    jest.restoreAllMocks();
+});
+
+describe('로컬 .env 로딩', () => {
+    it('.env가 있으면 Sentry 설정 전에 먼저 읽는다', () => {
+        mockEnvFileExists = true;
+        const loadEnvFile = jest.spyOn(process, 'loadEnvFile').mockImplementation(() => {});
+
+        loadOptions();
+
+        expect(loadEnvFile).toHaveBeenCalledWith('.env');
+    });
+
+    it('.env가 없으면 (dev/prod 컨테이너) 읽지 않는다', () => {
+        const loadEnvFile = jest.spyOn(process, 'loadEnvFile').mockImplementation(() => {});
+
+        loadOptions();
+
+        expect(loadEnvFile).not.toHaveBeenCalled();
+    });
+});
+
+describe('활성화 스위치', () => {
+    it('local은 기본으로 꺼져 있다', () => {
+        const options = loadOptions({ APP_PROFILE: 'local', SENTRY_ENABLED: undefined });
+        expect(options.enabled).toBe(false);
+    });
+
+    it('local에서 SENTRY_ENABLED=true면 켜진다', () => {
+        const options = loadOptions({ APP_PROFILE: 'local', SENTRY_ENABLED: 'true' });
+        expect(options.enabled).toBe(true);
+        expect(options.environment).toBe('local');
+    });
+
+    it('dev/prod는 SENTRY_ENABLED와 상관없이 켜진다', () => {
+        expect(loadOptions({ APP_PROFILE: 'dev', SENTRY_ENABLED: undefined }).enabled).toBe(true);
+        expect(loadOptions({ APP_PROFILE: 'prod', SENTRY_ENABLED: 'false' }).enabled).toBe(true);
+    });
+});
 
 describe('Kakao callback privacy', () => {
-    const options = ((Sentry.init as jest.Mock).mock.calls as unknown[][])[0][0] as {
-        beforeSend: (event: unknown) => unknown;
-        beforeSendTransaction: (event: unknown) => unknown;
-        integrations: {
-            ignoreIncomingRequests: (url: string) => boolean;
-            ignoreOutgoingRequests: (url: string) => boolean;
-        }[];
-    };
-
-    it('스킬 요청의 오류·트레이스 이벤트는 토큰이 담긴 본문과 함께 전송하지 않는다', () => {
+    it('스킬 요청의 에러 이벤트는 남기고, 토큰이 담긴 본문만 지운다', () => {
+        const options = loadOptions();
         const event = {
             request: {
                 url: 'https://api.test/kakao/skill/chat',
                 data: { callbackUrl: 'secret-token' },
             },
         };
-        expect(options.beforeSend(event)).toBeNull();
+
+        const result = options.beforeSend(event);
+
+        expect(result).not.toBeNull();
+        expect(result?.request?.url).toBe('https://api.test/kakao/skill/chat');
+        expect(result?.request).not.toHaveProperty('data');
+    });
+
+    it('스킬 요청의 트레이스와 카카오 턴 호출은 계속 보내지 않는다', () => {
+        const options = loadOptions();
+        const event = {
+            request: {
+                url: 'https://api.test/kakao/skill/chat',
+                data: { callbackUrl: 'secret-token' },
+            },
+        };
+
         expect(options.beforeSendTransaction(event)).toBeNull();
         expect(options.integrations[0].ignoreIncomingRequests('/kakao/skill/chat')).toBe(true);
         expect(
@@ -32,9 +130,307 @@ describe('Kakao callback privacy', () => {
         ).toBe(true);
     });
 
-    it('카카오 턴 이외의 오류 보고는 유지한다', () => {
-        const event = { request: { url: 'https://api.test/blocks' } };
-        expect(options.beforeSend(event)).toBe(event);
+    it('카카오 이외 요청의 본문은 그대로 둔다', () => {
+        const options = loadOptions();
+        const event = { request: { url: 'https://api.test/blocks', data: { title: 'a' } } };
+
+        expect(options.beforeSend(event)?.request?.data).toEqual({ title: 'a' });
         expect(options.beforeSendTransaction(event)).toBe(event);
+    });
+});
+
+describe('요청 헤더 마스킹', () => {
+    it('인증 토큰, 내부 API 키, 카카오 스킬 시크릿 헤더를 지운다', () => {
+        const options = loadOptions();
+        const headers = {
+            authorization: 'Bearer jwt',
+            'x-api-key': 'internal-key',
+            'x-kakao-skill-secret': 'kakao-secret',
+            cookie: 'refresh=token',
+            'content-type': 'application/json',
+            'user-agent': 'jest',
+        };
+
+        const errorEvent = options.beforeSend({
+            request: { url: 'https://api.test/blocks', headers: { ...headers } },
+        });
+        const transaction = options.beforeSendTransaction({
+            request: {
+                url: 'https://api.test/api/v1/kakao/turn-complete',
+                headers: { ...headers },
+            },
+        });
+
+        for (const result of [errorEvent, transaction]) {
+            expect(result?.request?.headers).toEqual({
+                'content-type': 'application/json',
+                'user-agent': 'jest',
+            });
+        }
+    });
+});
+
+describe('트레이스 제외 경로', () => {
+    it('헬스체크와 Swagger 문서 요청은 트레이스를 남기지 않는다', () => {
+        const { ignoreIncomingRequests } = loadOptions().integrations[0];
+
+        expect(ignoreIncomingRequests('/health')).toBe(true);
+        expect(ignoreIncomingRequests('/health?probe=1')).toBe(true);
+        expect(ignoreIncomingRequests('/docs')).toBe(true);
+        expect(ignoreIncomingRequests('/docs-json')).toBe(true);
+        expect(ignoreIncomingRequests('/blocks')).toBe(false);
+        expect(ignoreIncomingRequests('/healthz')).toBe(false);
+    });
+});
+
+describe('Sentry Logs', () => {
+    it('debug 로그는 보내지 않고 나머지는 보낸다', () => {
+        const options = loadOptions();
+        const info = { level: 'info', message: 'ok' };
+
+        expect(options.beforeSendLog({ level: 'debug', message: 'noise' })).toBeNull();
+        expect(options.beforeSendLog(info)).toBe(info);
+    });
+});
+
+describe('디스코드 알림 스위치', () => {
+    const WEBHOOK = 'https://discord.test/webhook';
+    const errorEvent = () => ({
+        level: 'error',
+        exception: { values: [{ type: 'Error', value: 'boom' }] },
+        request: { url: 'https://api.folioo.ai/api/v1/blocks', headers: {} },
+    });
+
+    const sendAndCount = (env: Record<string, string | undefined>): number => {
+        const fetchSpy = jest
+            .spyOn(global, 'fetch')
+            .mockResolvedValue(new Response(null, { status: 204 }));
+        loadOptions(env).beforeSend(errorEvent());
+        return fetchSpy.mock.calls.length;
+    };
+
+    it('prod에서 Webhook URL이 있으면 에러 이벤트를 디스코드로도 보낸다', () => {
+        expect(sendAndCount({ APP_PROFILE: 'prod', DISCORD_WEBHOOK_URL: WEBHOOK })).toBe(1);
+    });
+
+    it('dev는 보내지 않고, DISCORD_ALERT_ENABLED=true일 때만 보낸다', () => {
+        expect(sendAndCount({ APP_PROFILE: 'dev', DISCORD_WEBHOOK_URL: WEBHOOK })).toBe(0);
+        expect(
+            sendAndCount({
+                APP_PROFILE: 'local',
+                DISCORD_WEBHOOK_URL: WEBHOOK,
+                DISCORD_ALERT_ENABLED: 'true',
+            })
+        ).toBe(1);
+    });
+
+    it('Webhook URL이 없으면 보내지 않고, prod면 시작할 때 경고를 남긴다', () => {
+        const warn = jest.fn();
+        jest.doMock('@nestjs/common', () => ({ Logger: { warn } }));
+
+        expect(sendAndCount({ APP_PROFILE: 'prod', DISCORD_WEBHOOK_URL: undefined })).toBe(0);
+
+        expect(warn).toHaveBeenCalledWith(
+            'DISCORD_WEBHOOK_URL is not set. Discord alerts are disabled in prod.',
+            'DiscordAlert'
+        );
+        jest.dontMock('@nestjs/common');
+    });
+
+    it('dev는 Webhook URL이 없어도 경고하지 않는다', () => {
+        const warn = jest.fn();
+        jest.doMock('@nestjs/common', () => ({ Logger: { warn } }));
+
+        sendAndCount({ APP_PROFILE: 'dev', DISCORD_WEBHOOK_URL: undefined });
+
+        expect(warn).not.toHaveBeenCalled();
+        jest.dontMock('@nestjs/common');
+    });
+});
+
+describe('릴리스', () => {
+    it('배포 이미지는 SENTRY_RELEASE(git SHA)를 쓴다', () => {
+        expect(loadOptions({ SENTRY_RELEASE: 'folioo-server@abc123' }).release).toBe(
+            'folioo-server@abc123'
+        );
+    });
+
+    it('SENTRY_RELEASE가 없으면 (로컬) package.json 버전을 쓴다', () => {
+        expect(loadOptions({ SENTRY_RELEASE: undefined }).release).toMatch(
+            /^folioo-server@\d+\.\d+\.\d+/
+        );
+    });
+});
+
+describe('에러 샘플링', () => {
+    it('dev는 에러를 절반만 보내고, prod와 local은 전부 보낸다', () => {
+        expect(loadOptions({ APP_PROFILE: 'dev' }).sampleRate).toBe(0.5);
+        expect(loadOptions({ APP_PROFILE: 'prod' }).sampleRate).toBe(1);
+        expect(loadOptions({ APP_PROFILE: 'local' }).sampleRate).toBe(1);
+    });
+});
+
+describe('OAuth 콜백 인가 코드 제거', () => {
+    const CALLBACK_URL =
+        'https://api.folioo.ai/kakao-channel/link/callback?code=auth-code&state=signed-state&error=x';
+
+    it('에러 이벤트의 url과 query_string에서 code·state를 지우고 나머지는 남긴다', () => {
+        const event = loadOptions().beforeSend({
+            request: {
+                url: CALLBACK_URL,
+                query_string: 'code=auth-code&state=signed-state&error=x',
+            },
+        });
+
+        expect(event?.request?.url).toBe(
+            'https://api.folioo.ai/kakao-channel/link/callback?error=x'
+        );
+        expect(event?.request?.query_string).toBe('error=x');
+        expect(JSON.stringify(event)).not.toMatch(/auth-code|signed-state/);
+    });
+
+    it('객체·배열 형태의 query_string도 지운다', () => {
+        const options = loadOptions();
+
+        expect(
+            options.beforeSend({ request: { query_string: { code: 'c', page: '1' } } })?.request
+                ?.query_string
+        ).toEqual({ page: '1' });
+        expect(
+            options.beforeSend({
+                request: {
+                    query_string: [
+                        ['state', 's'],
+                        ['page', '1'],
+                    ],
+                },
+            })?.request?.query_string
+        ).toEqual([['page', '1']]);
+    });
+
+    it('쿼리의 민감한 키(token 등)도 지운다', () => {
+        const event = loadOptions().beforeSend({
+            request: { url: 'https://api.folioo.ai/blocks?page=2&access_token=t' },
+        });
+
+        expect(event?.request?.url).toBe('https://api.folioo.ai/blocks?page=2');
+    });
+
+    it.each([
+        '/auth/kakao/callback?code=c',
+        '/auth/google/callback?code=c',
+        '/auth/naver/callback?code=c&state=s',
+        '/kakao-channel/link/callback?code=c&state=s',
+    ])('%s 는 트레이스를 남기지 않는다', (path) => {
+        const options = loadOptions();
+
+        expect(options.integrations[0].ignoreIncomingRequests(path)).toBe(true);
+        expect(
+            options.beforeSendTransaction({ request: { url: `https://api.folioo.ai${path}` } })
+        ).toBeNull();
+    });
+
+    it('콜백이 아닌 auth 경로는 그대로 트레이스한다', () => {
+        expect(loadOptions().integrations[0].ignoreIncomingRequests('/auth/refresh')).toBe(false);
+    });
+});
+
+describe('요청 본문 민감 키 제거', () => {
+    it('카카오 계정 연결 본문의 link_token을 지운다 (객체)', () => {
+        const event = loadOptions().beforeSend({
+            request: {
+                url: 'https://api.folioo.ai/kakao-channel/link',
+                data: { link_token: 'signed-link-token', other: 'ok' },
+            },
+        });
+
+        expect(event?.request?.data).toEqual({ other: 'ok' });
+    });
+
+    it('JSON 문자열 본문과 중첩 객체도 지운다', () => {
+        const event = loadOptions().beforeSend({
+            request: {
+                url: 'https://api.folioo.ai/x',
+                data: JSON.stringify({ user: { password: 'p', name: 'n' }, link_token: 't' }),
+            },
+        });
+
+        expect(JSON.parse(event?.request?.data as string)).toEqual({ user: { name: 'n' } });
+    });
+
+    it('form-urlencoded 본문도 지운다', () => {
+        const event = loadOptions().beforeSend({
+            request: { url: 'https://api.folioo.ai/x', data: 'link_token=t&keep=1' },
+        });
+
+        expect(event?.request?.data).toBe('keep=1');
+    });
+});
+
+describe('트레이스 span·로그 메시지의 쿼리 값 제거', () => {
+    it('transaction의 span 속성(http.query, http.url 등)에서 민감한 쿼리 값을 가린다', () => {
+        const event = loadOptions().beforeSendTransaction({
+            request: { url: 'https://api.folioo.ai/blocks?code=c1&page=1' },
+            contexts: {
+                trace: {
+                    data: {
+                        'http.query': 'code=c1&state=s1&page=1',
+                        'http.target': '/blocks?code=c1&page=1',
+                        'http.status_code': 500,
+                    },
+                },
+            },
+            spans: [{ data: { 'http.url': '/blocks?access_token=t1&page=1' } }],
+        } as never) as unknown as {
+            contexts: { trace: { data: Record<string, unknown> } };
+            spans: { data: Record<string, unknown> }[];
+        };
+
+        expect(event.contexts.trace.data['http.query']).toBe(
+            'code=[Filtered]&state=[Filtered]&page=1'
+        );
+        expect(event.contexts.trace.data['http.target']).toBe('/blocks?code=[Filtered]&page=1');
+        expect(event.contexts.trace.data['http.status_code']).toBe(500);
+        expect(event.spans[0].data['http.url']).toBe('/blocks?access_token=[Filtered]&page=1');
+    });
+
+    it('로그 메시지에 섞인 URL의 민감한 쿼리 값을 가린다', () => {
+        const beforeSendLog = loadOptions().beforeSendLog as (log: {
+            level: string;
+            message: string;
+        }) => { message: string } | null;
+
+        expect(
+            beforeSendLog({
+                level: 'warn',
+                message:
+                    '⚠️ [Client Error] /auth/kakao/callback?code=c1&state=s1: 유효하지 않은 사용자입니다.',
+            })?.message
+        ).toBe(
+            '⚠️ [Client Error] /auth/kakao/callback?code=[Filtered]&state=[Filtered]: 유효하지 않은 사용자입니다.'
+        );
+    });
+});
+
+describe('디스코드 Webhook URL 노출 방지', () => {
+    const WEBHOOK = 'https://discord.com/api/webhooks/1570429508836655247/secret-token';
+
+    it('fetch·http 계측 모두 Webhook 요청을 span·breadcrumb으로 남기지 않는다', () => {
+        const { integrations } = loadOptions();
+
+        expect(integrations[0].ignoreOutgoingRequests(WEBHOOK)).toBe(true);
+        expect(integrations[1].ignoreOutgoingRequests(WEBHOOK)).toBe(true);
+        expect(
+            integrations[1].ignoreOutgoingRequests('https://discordapp.com/api/webhooks/1/t')
+        ).toBe(true);
+        expect(integrations[1].ignoreOutgoingRequests('https://ai.folioo.ai/api/v1/x')).toBe(false);
+    });
+
+    it('Webhook URL이 담긴 breadcrumb은 버린다', () => {
+        const { beforeBreadcrumb } = loadOptions();
+        const other = { data: { url: 'https://ai.folioo.ai/api/v1/x' } };
+
+        expect(beforeBreadcrumb({ data: { url: WEBHOOK } })).toBeNull();
+        expect(beforeBreadcrumb(other)).toBe(other);
     });
 });

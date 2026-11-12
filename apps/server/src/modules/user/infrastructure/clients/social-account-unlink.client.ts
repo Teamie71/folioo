@@ -306,8 +306,12 @@ export class SocialAccountUnlinkClient {
         httpStatus: number,
         responseBody: string
     ): void {
+        // 제공자 응답 본문에는 토큰이 되돌아올 수 있어 Sentry Logs로 보내지 않는다 (debug는 콘솔에만 남음).
         this.logger.error(
-            `Social unlink provider response error: provider=${socialUser.loginType}, userId=${socialUser.userId}, socialUserId=${socialUser.id}, reason=${reason}, httpStatus=${httpStatus}, responseBody=${responseBody}`
+            `Social unlink provider response error: provider=${socialUser.loginType}, userId=${socialUser.userId}, socialUserId=${socialUser.id}, reason=${reason}, httpStatus=${httpStatus}`
+        );
+        this.logger.debug(
+            `Social unlink provider response body: socialUserId=${socialUser.id}, reason=${reason}, responseBody=${responseBody}`
         );
     }
 
@@ -317,7 +321,10 @@ export class SocialAccountUnlinkClient {
         responseBody: string
     ): void {
         this.logger.error(
-            `Social unlink provider api error: provider=${socialUser.loginType}, userId=${socialUser.userId}, socialUserId=${socialUser.id}, reason=${reason}, responseBody=${responseBody}`
+            `Social unlink provider api error: provider=${socialUser.loginType}, userId=${socialUser.userId}, socialUserId=${socialUser.id}, reason=${reason}`
+        );
+        this.logger.debug(
+            `Social unlink provider api error body: socialUserId=${socialUser.id}, reason=${reason}, responseBody=${responseBody}`
         );
     }
 
