@@ -17,6 +17,7 @@ type RequestEvent = {
 type InstrumentOptions = {
     enabled: boolean;
     environment: string;
+    release: string;
     beforeSend: (event: RequestEvent) => RequestEvent | null;
     beforeSendTransaction: (event: RequestEvent) => RequestEvent | null;
     beforeSendLog: (log: { level: string; message: string }) => unknown;
@@ -214,5 +215,19 @@ describe('디스코드 알림 스위치', () => {
 
     it('Webhook URL이 없으면 보내지 않는다', () => {
         expect(sendAndCount({ APP_PROFILE: 'prod', DISCORD_WEBHOOK_URL: undefined })).toBe(0);
+    });
+});
+
+describe('릴리스', () => {
+    it('배포 이미지는 SENTRY_RELEASE(git SHA)를 쓴다', () => {
+        expect(loadOptions({ SENTRY_RELEASE: 'folioo-server@abc123' }).release).toBe(
+            'folioo-server@abc123'
+        );
+    });
+
+    it('SENTRY_RELEASE가 없으면 (로컬) package.json 버전을 쓴다', () => {
+        expect(loadOptions({ SENTRY_RELEASE: undefined }).release).toMatch(
+            /^folioo-server@\d+\.\d+\.\d+/
+        );
     });
 });

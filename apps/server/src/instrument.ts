@@ -75,8 +75,8 @@ Sentry.init({
     // 환경 구분
     environment: appProfile,
 
-    // 릴리스 버전 추적
-    release: `folioo-server@${version}`,
+    // 릴리스: 배포 환경이 SENTRY_RELEASE(예: folioo-server@<git SHA>)를 넣으면 그 값을, 없으면 package.json 버전을 쓴다.
+    release: process.env.SENTRY_RELEASE || `folioo-server@${version}`,
 
     // Tracing 샘플링 (prod 30%)
     tracesSampleRate: appProfile === 'prod' ? 0.3 : 1.0,
