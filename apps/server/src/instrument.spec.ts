@@ -11,7 +11,12 @@ jest.mock('node:fs', () => ({
 }));
 
 type RequestEvent = {
-    request?: { url?: string; data?: unknown; headers?: Record<string, string> };
+    request?: {
+        url?: string;
+        data?: unknown;
+        query_string?: unknown;
+        headers?: Record<string, string>;
+    };
 };
 
 type InstrumentOptions = {
@@ -238,5 +243,70 @@ describe('에러 샘플링', () => {
         expect(loadOptions({ APP_PROFILE: 'dev' }).sampleRate).toBe(0.5);
         expect(loadOptions({ APP_PROFILE: 'prod' }).sampleRate).toBe(1);
         expect(loadOptions({ APP_PROFILE: 'local' }).sampleRate).toBe(1);
+    });
+});
+
+describe('OAuth 콜백 인가 코드 제거', () => {
+    const CALLBACK_URL =
+        'https://api.folioo.ai/kakao-channel/link/callback?code=auth-code&state=signed-state&error=x';
+
+    it('에러 이벤트의 url과 query_string에서 code·state를 지우고 나머지는 남긴다', () => {
+        const event = loadOptions().beforeSend({
+            request: {
+                url: CALLBACK_URL,
+                query_string: 'code=auth-code&state=signed-state&error=x',
+            },
+        });
+
+        expect(event?.request?.url).toBe(
+            'https://api.folioo.ai/kakao-channel/link/callback?error=x'
+        );
+        expect(event?.request?.query_string).toBe('error=x');
+        expect(JSON.stringify(event)).not.toMatch(/auth-code|signed-state/);
+    });
+
+    it('객체·배열 형태의 query_string도 지운다', () => {
+        const options = loadOptions();
+
+        expect(
+            options.beforeSend({ request: { query_string: { code: 'c', page: '1' } } })?.request
+                ?.query_string
+        ).toEqual({ page: '1' });
+        expect(
+            options.beforeSend({
+                request: {
+                    query_string: [
+                        ['state', 's'],
+                        ['page', '1'],
+                    ],
+                },
+            })?.request?.query_string
+        ).toEqual([['page', '1']]);
+    });
+
+    it('쿼리의 민감한 키(token 등)도 지운다', () => {
+        const event = loadOptions().beforeSend({
+            request: { url: 'https://api.folioo.ai/blocks?page=2&access_token=t' },
+        });
+
+        expect(event?.request?.url).toBe('https://api.folioo.ai/blocks?page=2');
+    });
+
+    it.each([
+        '/auth/kakao/callback?code=c',
+        '/auth/google/callback?code=c',
+        '/auth/naver/callback?code=c&state=s',
+        '/kakao-channel/link/callback?code=c&state=s',
+    ])('%s 는 트레이스를 남기지 않는다', (path) => {
+        const options = loadOptions();
+
+        expect(options.integrations[0].ignoreIncomingRequests(path)).toBe(true);
+        expect(
+            options.beforeSendTransaction({ request: { url: `https://api.folioo.ai${path}` } })
+        ).toBeNull();
+    });
+
+    it('콜백이 아닌 auth 경로는 그대로 트레이스한다', () => {
+        expect(loadOptions().integrations[0].ignoreIncomingRequests('/auth/refresh')).toBe(false);
     });
 });

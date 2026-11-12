@@ -27,16 +27,53 @@ const KAKAO_SKILL_PATH = '/kakao/skill/';
 // SDK는 sendDefaultPii: false여도 쿠키·IP 헤더만 지우고 나머지 헤더는 그대로 보낸다.
 const SENSITIVE_HEADER_PATTERN = /auth|token|secret|key|cookie|session|password/i;
 
+// OAuth 콜백(로그인, 카카오 계정 연결)은 쿼리에 인가 코드(code)와 state가 실린다.
+// SDK는 요청의 url·query_string을 기본으로 이벤트에 넣으므로 이 값들을 지우고, 콜백은 트레이스도 남기지 않는다.
+const OAUTH_CALLBACK_PATH_PATTERN = /^\/(auth\/(kakao|google|naver)|kakao-channel\/link)\/callback/;
+const isSensitiveQueryKey = (key: string): boolean =>
+    key === 'code' || key === 'state' || SENSITIVE_HEADER_PATTERN.test(key);
+
+type QueryString = string | [string, string][] | Record<string, string>;
+
 type RequestEvent = {
     request?: {
         url?: string;
         data?: unknown;
+        query_string?: QueryString;
         headers?: Record<string, string>;
     };
 };
 
 const isKakaoSkillRequest = (event: RequestEvent): boolean =>
     event.request?.url?.includes(KAKAO_SKILL_PATH) ?? false;
+
+const pathOf = (url: string): string => {
+    try {
+        return new URL(url, 'http://localhost').pathname;
+    } catch {
+        return url.split('?')[0];
+    }
+};
+
+const isOAuthCallbackPath = (urlOrPath: string): boolean =>
+    OAUTH_CALLBACK_PATH_PATTERN.test(pathOf(urlOrPath));
+
+const scrubUrl = (url: string): string => {
+    const queryStart = url.indexOf('?');
+    if (queryStart < 0) return url;
+    const params = new URLSearchParams(url.slice(queryStart + 1));
+    for (const key of [...params.keys()]) {
+        if (isSensitiveQueryKey(key)) params.delete(key);
+    }
+    const query = params.toString();
+    return query ? `${url.slice(0, queryStart)}?${query}` : url.slice(0, queryStart);
+};
+
+const scrubQueryString = (query: QueryString): QueryString => {
+    if (typeof query === 'string') return scrubUrl(`?${query}`).slice(1);
+    if (Array.isArray(query)) return query.filter(([key]) => !isSensitiveQueryKey(key));
+    return Object.fromEntries(Object.entries(query).filter(([key]) => !isSensitiveQueryKey(key)));
+};
 
 const scrubRequest = <T extends RequestEvent>(event: T): T => {
     const request = event.request;
@@ -50,6 +87,8 @@ const scrubRequest = <T extends RequestEvent>(event: T): T => {
     if (isKakaoSkillRequest(event)) {
         delete request.data;
     }
+    if (request.url) request.url = scrubUrl(request.url);
+    if (request.query_string) request.query_string = scrubQueryString(request.query_string);
     return event;
 };
 
@@ -91,11 +130,13 @@ Sentry.init({
     enableLogs: true,
     beforeSendLog: (log) => (log.level === 'debug' ? null : log),
 
-    // 카카오 턴은 콜백 토큰이 오가므로 트레이스를 남기지 않는다.
+    // 카카오 턴과 OAuth 콜백은 토큰·인가 코드가 오가므로 트레이스를 남기지 않는다.
     integrations: [
         Sentry.httpIntegration({
             ignoreIncomingRequests: (path) =>
-                path.startsWith(KAKAO_SKILL_PATH) || isUntracedPath(path),
+                path.startsWith(KAKAO_SKILL_PATH) ||
+                isOAuthCallbackPath(path) ||
+                isUntracedPath(path),
             ignoreOutgoingRequests: (url) =>
                 url.includes('/kakao/turns') || url.includes('/bot-api.kakao.com/'),
         }),
@@ -105,5 +146,8 @@ Sentry.init({
         sendDiscordAlert?.(scrubbed);
         return scrubbed;
     },
-    beforeSendTransaction: (event) => (isKakaoSkillRequest(event) ? null : scrubRequest(event)),
+    beforeSendTransaction: (event) =>
+        isKakaoSkillRequest(event) || isOAuthCallbackPath(event.request?.url ?? '')
+            ? null
+            : scrubRequest(event),
 });
