@@ -342,3 +342,48 @@ describe('요청 본문 민감 키 제거', () => {
         expect(event?.request?.data).toBe('keep=1');
     });
 });
+
+describe('트레이스 span·로그 메시지의 쿼리 값 제거', () => {
+    it('transaction의 span 속성(http.query, http.url 등)에서 민감한 쿼리 값을 가린다', () => {
+        const event = loadOptions().beforeSendTransaction({
+            request: { url: 'https://api.folioo.ai/blocks?code=c1&page=1' },
+            contexts: {
+                trace: {
+                    data: {
+                        'http.query': 'code=c1&state=s1&page=1',
+                        'http.target': '/blocks?code=c1&page=1',
+                        'http.status_code': 500,
+                    },
+                },
+            },
+            spans: [{ data: { 'http.url': '/blocks?access_token=t1&page=1' } }],
+        } as never) as unknown as {
+            contexts: { trace: { data: Record<string, unknown> } };
+            spans: { data: Record<string, unknown> }[];
+        };
+
+        expect(event.contexts.trace.data['http.query']).toBe(
+            'code=[Filtered]&state=[Filtered]&page=1'
+        );
+        expect(event.contexts.trace.data['http.target']).toBe('/blocks?code=[Filtered]&page=1');
+        expect(event.contexts.trace.data['http.status_code']).toBe(500);
+        expect(event.spans[0].data['http.url']).toBe('/blocks?access_token=[Filtered]&page=1');
+    });
+
+    it('로그 메시지에 섞인 URL의 민감한 쿼리 값을 가린다', () => {
+        const beforeSendLog = loadOptions().beforeSendLog as (log: {
+            level: string;
+            message: string;
+        }) => { message: string } | null;
+
+        expect(
+            beforeSendLog({
+                level: 'warn',
+                message:
+                    '⚠️ [Client Error] /auth/kakao/callback?code=c1&state=s1: 유효하지 않은 사용자입니다.',
+            })?.message
+        ).toBe(
+            '⚠️ [Client Error] /auth/kakao/callback?code=[Filtered]&state=[Filtered]: 유효하지 않은 사용자입니다.'
+        );
+    });
+});

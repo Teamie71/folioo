@@ -69,6 +69,35 @@ const scrubUrl = (url: string): string => {
     return query ? `${url.slice(0, queryStart)}?${query}` : url.slice(0, queryStart);
 };
 
+// 로그 메시지·span 속성처럼 URL이 문자열 안에 섞인 곳은 민감한 쿼리 값만 [Filtered]로 바꾼다.
+// 값은 &·공백·#·: 앞에서 끊는다 (예외 필터 로그가 "경로: 이유" 형식이라).
+const QUERY_PARAM_IN_TEXT_PATTERN = /(^|[?&])([^=&\s#?]+)=([^&\s#:]*)/g;
+const scrubQueryInText = (text: string): string =>
+    text.includes('=')
+        ? text.replace(QUERY_PARAM_IN_TEXT_PATTERN, (match, sep: string, key: string) =>
+              isSensitiveQueryKey(key) ? `${sep}${key}=[Filtered]` : match
+          )
+        : text;
+
+type SpanData = Record<string, unknown>;
+type TransactionLike = RequestEvent & {
+    contexts?: { trace?: { data?: SpanData } };
+    spans?: { data?: SpanData }[];
+};
+
+const scrubSpanData = (data: SpanData | undefined): void => {
+    if (!data) return;
+    for (const [key, value] of Object.entries(data)) {
+        if (typeof value === 'string') data[key] = scrubQueryInText(value);
+    }
+};
+
+const scrubTransaction = <T extends TransactionLike>(event: T): T => {
+    scrubSpanData(event.contexts?.trace?.data);
+    for (const span of event.spans ?? []) scrubSpanData(span.data);
+    return scrubRequest(event);
+};
+
 const scrubQueryString = (query: QueryString): QueryString => {
     if (typeof query === 'string') return scrubUrl(`?${query}`).slice(1);
     if (Array.isArray(query)) return query.filter(([key]) => !isSensitiveQueryKey(key));
@@ -152,7 +181,12 @@ Sentry.init({
 
     // Sentry Logs (SDK 10.71.0 미만은 직접 켜야 한다)
     enableLogs: true,
-    beforeSendLog: (log) => (log.level === 'debug' ? null : log),
+    beforeSendLog: (log) => {
+        if (log.level === 'debug') return null;
+        // 예외 필터 로그는 쿼리를 포함한 경로를 남긴다 (예: 로그인 콜백 ?code=).
+        if (typeof log.message === 'string') log.message = scrubQueryInText(log.message);
+        return log;
+    },
 
     // 카카오 턴과 OAuth 콜백은 토큰·인가 코드가 오가므로 트레이스를 남기지 않는다.
     integrations: [
@@ -173,5 +207,5 @@ Sentry.init({
     beforeSendTransaction: (event) =>
         isKakaoSkillRequest(event) || isOAuthCallbackPath(event.request?.url ?? '')
             ? null
-            : scrubRequest(event),
+            : scrubTransaction(event),
 });
