@@ -75,6 +75,28 @@ const scrubQueryString = (query: QueryString): QueryString => {
     return Object.fromEntries(Object.entries(query).filter(([key]) => !isSensitiveQueryKey(key)));
 };
 
+// 요청 본문은 5xx 이벤트에 그대로 실린다. 헤더와 같은 기준으로 민감한 키(link_token, password 등)를 지운다.
+const MAX_BODY_DEPTH = 5;
+const scrubBodyValue = (value: unknown, depth = 0): unknown => {
+    if (depth > MAX_BODY_DEPTH || value === null || typeof value !== 'object') return value;
+    if (Array.isArray(value)) return value.map((item) => scrubBodyValue(item, depth + 1));
+    return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>)
+            .filter(([key]) => !SENSITIVE_HEADER_PATTERN.test(key))
+            .map(([key, item]) => [key, scrubBodyValue(item, depth + 1)])
+    );
+};
+
+const scrubBody = (data: unknown): unknown => {
+    if (typeof data !== 'string') return scrubBodyValue(data);
+    try {
+        return JSON.stringify(scrubBodyValue(JSON.parse(data)));
+    } catch {
+        // JSON이 아니면 form-urlencoded로 보고 같은 기준으로 지운다.
+        return scrubUrl(`?${data}`).slice(1);
+    }
+};
+
 const scrubRequest = <T extends RequestEvent>(event: T): T => {
     const request = event.request;
     if (!request) return event;
@@ -86,6 +108,8 @@ const scrubRequest = <T extends RequestEvent>(event: T): T => {
     }
     if (isKakaoSkillRequest(event)) {
         delete request.data;
+    } else if (request.data !== undefined) {
+        request.data = scrubBody(request.data);
     }
     if (request.url) request.url = scrubUrl(request.url);
     if (request.query_string) request.query_string = scrubQueryString(request.query_string);

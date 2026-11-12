@@ -310,3 +310,35 @@ describe('OAuth 콜백 인가 코드 제거', () => {
         expect(loadOptions().integrations[0].ignoreIncomingRequests('/auth/refresh')).toBe(false);
     });
 });
+
+describe('요청 본문 민감 키 제거', () => {
+    it('카카오 계정 연결 본문의 link_token을 지운다 (객체)', () => {
+        const event = loadOptions().beforeSend({
+            request: {
+                url: 'https://api.folioo.ai/kakao-channel/link',
+                data: { link_token: 'signed-link-token', other: 'ok' },
+            },
+        });
+
+        expect(event?.request?.data).toEqual({ other: 'ok' });
+    });
+
+    it('JSON 문자열 본문과 중첩 객체도 지운다', () => {
+        const event = loadOptions().beforeSend({
+            request: {
+                url: 'https://api.folioo.ai/x',
+                data: JSON.stringify({ user: { password: 'p', name: 'n' }, link_token: 't' }),
+            },
+        });
+
+        expect(JSON.parse(event?.request?.data as string)).toEqual({ user: { name: 'n' } });
+    });
+
+    it('form-urlencoded 본문도 지운다', () => {
+        const event = loadOptions().beforeSend({
+            request: { url: 'https://api.folioo.ai/x', data: 'link_token=t&keep=1' },
+        });
+
+        expect(event?.request?.data).toBe('keep=1');
+    });
+});
