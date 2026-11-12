@@ -27,13 +27,20 @@ import io
 import logging
 import math
 import re
+import threading
 import zipfile
+import zlib
 from xml.etree import ElementTree
+
+from defusedxml import DefusedXmlException
+from defusedxml.ElementTree import fromstring as defused_fromstring
 
 from common.llm.client import get_file_processor_llm
 from features.experience_map.config import (
     MAX_FILE_TEXT_CHARS,
+    MAX_OFFICE_XML_BYTES,
     MAX_PDF_PAGES,
+    MAX_PDF_RENDER_PIXELS,
     OCR_MIME_TYPES,
     PARSER_MIME_TYPES,
     PDF_OCR_CONCURRENCY,
@@ -42,6 +49,9 @@ from features.experience_map.config import (
 )
 
 logger = logging.getLogger(__name__)
+
+_PDFIUM_LOCK = threading.Lock()
+"""PDFium은 스레드 안전하지 않다. 추출을 스레드로 옮겼으므로 PDFium 호출은 한 번에 하나만 한다."""
 
 TRUNCATION_NOTE = "\n\n[내용이 길어 앞부분만 사용했습니다.]"
 # 페이지 수 상한으로 뒤쪽을 버렸을 때 붙이는 안내문. 접두사(PAGE_TRUNCATION_NOTE_MARKER)를
@@ -85,15 +95,41 @@ def _extract_text_plain(data: bytes) -> str:
 def _require_valid_zip(data: bytes) -> None:
     """DOCX·PPTX 가 온전한 zip 컨테이너인지 확인한다.
 
-    업로드 단계의 파일 signature 검사에 더해 컨테이너 전체의 무결성을 확인한다.
+    업로드 단계의 파일 signature 검사에 더해 zip 목록이 온전한지 확인한다.
     손상된 문서를 LLM 입력으로 전달하지 않도록 실제 파싱 전에 거절한다.
+    본문 항목의 CRC는 `_read_office_parts`가 읽으면서 확인한다.
+
+    모든 항목의 압축을 풀어 CRC를 확인하는 `testzip()`은 쓰지 않는다. 압축 폭탄이
+    이 단계에서 바로 터졌다.
     """
     try:
-        with zipfile.ZipFile(io.BytesIO(data)) as archive:
-            if archive.testzip() is not None:
-                raise FileUnreadableError("문서가 손상되었습니다.")
+        with zipfile.ZipFile(io.BytesIO(data)):
+            pass
     except zipfile.BadZipFile as exc:
         raise FileUnreadableError("문서가 손상되었습니다.") from exc
+
+
+def _read_office_parts(archive: zipfile.ZipFile, names: list[str]) -> list[bytes]:
+    """본문 XML을 읽는다. 압축을 풀기 전에 선언된 크기로 상한을 확인한다.
+
+    zipfile은 선언된 크기(`file_size`)까지만 풀고 CRC를 확인하므로, 크기를 속인 항목은
+    `BadZipFile`이 된다.
+    """
+    declared = sum(archive.getinfo(name).file_size for name in names)
+    if declared > MAX_OFFICE_XML_BYTES:
+        logger.warning(
+            "문서 본문이 처리 상한을 넘어 거절합니다 (본문 %d바이트, 상한 %d바이트)",
+            declared,
+            MAX_OFFICE_XML_BYTES,
+        )
+        raise FileUnreadableError("문서 내용이 너무 커서 읽을 수 없습니다.")
+    parts: list[bytes] = []
+    for name in names:
+        with archive.open(name) as entry:
+            parts.append(entry.read(MAX_OFFICE_XML_BYTES + 1))
+    if sum(len(part) for part in parts) > MAX_OFFICE_XML_BYTES:
+        raise FileUnreadableError("문서 내용이 너무 커서 읽을 수 없습니다.")
+    return parts
 
 
 def _extract_office_xml(data: bytes, filename: str) -> str:
@@ -122,10 +158,16 @@ def _extract_office_xml(data: bytes, filename: str) -> str:
 
             if not names or any(name not in archive.namelist() for name in names):
                 raise FileUnreadableError("문서의 본문을 찾을 수 없습니다.")
-            parts = [_xml_text(archive.read(name)) for name in names]
+            parts = [_xml_text(part) for part in _read_office_parts(archive, names)]
     except FileUnreadableError:
         raise
-    except (KeyError, ElementTree.ParseError, zipfile.BadZipFile) as exc:
+    except (
+        KeyError,
+        ElementTree.ParseError,
+        DefusedXmlException,
+        zipfile.BadZipFile,
+        zlib.error,
+    ) as exc:
         raise FileUnreadableError("문서를 읽을 수 없습니다.") from exc
 
     text = "\n".join(part for part in parts if part).strip()
@@ -135,8 +177,11 @@ def _extract_office_xml(data: bytes, filename: str) -> str:
 
 
 def _xml_text(data: bytes) -> str:
-    """WordprocessingML/DrawingML의 텍스트 노드를 원래 순서로 합친다."""
-    root = ElementTree.fromstring(data)
+    """WordprocessingML/DrawingML의 텍스트 노드를 원래 순서로 합친다.
+
+    Office 본문 XML에는 DTD가 없다. 엔티티 확장 공격을 막으려고 DTD·엔티티를 거절한다.
+    """
+    root = defused_fromstring(data)
     paragraphs: list[str] = []
     for paragraph in root.iter():
         if paragraph.tag.rsplit("}", maxsplit=1)[-1] != "p":
@@ -164,7 +209,10 @@ def _suffix(filename: str) -> str:
 
 
 def _open_pdf(data: bytes):
-    """PDFium 문서를 열고 파일 자체가 손상된 경우 사용자 입력 오류로 구분한다."""
+    """PDFium 문서를 열고 파일 자체가 손상된 경우 사용자 입력 오류로 구분한다.
+
+    호출자는 `_PDFIUM_LOCK`을 잡은 상태여야 한다.
+    """
     import pypdfium2 as pdfium
 
     try:
@@ -189,11 +237,12 @@ def _pdf_total_page_count(data: bytes) -> int:
     범위가 다르기 때문) — 이 값과 `_pdf_page_count`를 비교해 잘렸는지
     판단한다.
     """
-    pdf = _open_pdf(data)
-    try:
-        return len(pdf)
-    finally:
-        pdf.close()
+    with _PDFIUM_LOCK:
+        pdf = _open_pdf(data)
+        try:
+            return len(pdf)
+        finally:
+            pdf.close()
 
 
 def _render_pdf_pages(data: bytes, page_indexes: list[int] | None = None) -> list[bytes]:
@@ -209,30 +258,46 @@ def _render_pdf_pages(data: bytes, page_indexes: list[int] | None = None) -> lis
 
     페이지가 너무 많으면 비용·시간이 무한정 늘어나므로 앞쪽 `MAX_PDF_PAGES`
     장만 쓴다 — 이력서·포트폴리오류는 뒤로 갈수록 부가 자료인 경우가 많다.
+
+    동기 함수라 호출자는 이벤트 루프 밖(`asyncio.to_thread`)에서 부른다.
     """
     import pypdfium2 as pdfium
 
-    pdf = _open_pdf(data)
-    try:
-        page_count = _pdf_page_count(pdf)
-        indexes = list(range(page_count)) if page_indexes is None else page_indexes
-        if any(index < 0 or index >= page_count for index in indexes):
-            raise ValueError("PDF 렌더링 페이지 범위가 올바르지 않습니다.")
-        images: list[bytes] = []
-        for index in indexes:
-            page = pdf[index]
-            try:
-                bitmap = page.render(scale=PDF_RENDER_SCALE)
-                buffer = io.BytesIO()
-                bitmap.to_pil().save(buffer, format="PNG")
-                images.append(buffer.getvalue())
-            finally:
-                page.close()
-        return images
-    except pdfium.PdfiumError as exc:
-        raise FileUnreadableError("PDF 페이지를 읽을 수 없습니다.") from exc
-    finally:
-        pdf.close()
+    with _PDFIUM_LOCK:
+        pdf = _open_pdf(data)
+        try:
+            page_count = _pdf_page_count(pdf)
+            indexes = list(range(page_count)) if page_indexes is None else page_indexes
+            if any(index < 0 or index >= page_count for index in indexes):
+                raise ValueError("PDF 렌더링 페이지 범위가 올바르지 않습니다.")
+            images: list[bytes] = []
+            for index in indexes:
+                page = pdf[index]
+                try:
+                    bitmap = page.render(scale=_render_scale(*page.get_size()))
+                    buffer = io.BytesIO()
+                    bitmap.to_pil().save(buffer, format="PNG")
+                    images.append(buffer.getvalue())
+                finally:
+                    page.close()
+            return images
+        except pdfium.PdfiumError as exc:
+            raise FileUnreadableError("PDF 페이지를 읽을 수 없습니다.") from exc
+        finally:
+            pdf.close()
+
+
+def _render_scale(width: float, height: float) -> float:
+    """렌더링 픽셀 수가 `MAX_PDF_RENDER_PIXELS`를 넘지 않는 배율. 보통 페이지는 기본 배율이다."""
+    area = max(width, 1.0) * max(height, 1.0)
+    limit = math.sqrt(MAX_PDF_RENDER_PIXELS / area)
+    if limit >= PDF_RENDER_SCALE:
+        return PDF_RENDER_SCALE
+    logger.warning(
+        "PDF 페이지가 커서 배율을 낮춥니다 (%.0f×%.0fpt, 배율 %.3f)", width, height, limit
+    )
+    # 소수 배율에서 반올림한 픽셀 수가 상한을 살짝 넘지 않게 여유를 둔다.
+    return limit * 0.999
 
 
 async def extract_with_parser(data: bytes, filename: str, content_type: str) -> str:
@@ -243,9 +308,9 @@ async def extract_with_parser(data: bytes, filename: str, content_type: str) -> 
             raise FileUnreadableError("빈 파일입니다.")
         return _truncate(text)
 
-    # ZIP/XML 파싱은 업로드 상한(5MB) 안에서 짧고 결정적인 CPU 작업이다.
-    # 별도 thread로 넘기면 제한된 런타임에서 worker 생성 자체가 멈출 수 있다.
-    text = _extract_office_xml(data, filename)
+    # 압축 해제와 XML 파싱은 동기 CPU 작업이다. 이벤트 루프에서 돌리면 처리하는 동안
+    # 서버의 다른 모든 요청이 멈췄다(압축 폭탄 DOCX 1MB: 7.9초).
+    text = await asyncio.to_thread(_extract_office_xml, data, filename)
     return _truncate(text)
 
 
@@ -299,22 +364,25 @@ def _pdf_text_layer(data: bytes) -> list[str]:
     """처리 상한 안의 페이지별 텍스트 레이어. 읽을 수 없는 페이지는 빈 문자열."""
     import pypdfium2 as pdfium
 
-    pdf = _open_pdf(data)
-    try:
-        texts: list[str] = []
-        for index in range(_pdf_page_count(pdf)):
-            page = pdf[index]
-            try:
-                textpage = page.get_textpage()
-                texts.append(textpage.get_text_range().replace("\r\n", "\n").replace("\r", "\n"))
-                textpage.close()
-            except pdfium.PdfiumError:
-                texts.append("")
-            finally:
-                page.close()
-        return texts
-    finally:
-        pdf.close()
+    with _PDFIUM_LOCK:
+        pdf = _open_pdf(data)
+        try:
+            texts: list[str] = []
+            for index in range(_pdf_page_count(pdf)):
+                page = pdf[index]
+                try:
+                    textpage = page.get_textpage()
+                    texts.append(
+                        textpage.get_text_range().replace("\r\n", "\n").replace("\r", "\n")
+                    )
+                    textpage.close()
+                except pdfium.PdfiumError:
+                    texts.append("")
+                finally:
+                    page.close()
+            return texts
+        finally:
+            pdf.close()
 
 
 def _usable_text_layer(text: str) -> bool:
@@ -335,7 +403,7 @@ async def _extract_pdf(data: bytes) -> str:
     """
     if not get_settings().file_pipeline_enabled:
         return await _extract_pdf_with_ocr(data)
-    layer = _pdf_text_layer(data)
+    layer = await asyncio.to_thread(_pdf_text_layer, data)
     ocr_indexes = [index for index, text in enumerate(layer) if not _usable_text_layer(text)]
     logger.info(
         "PDF 텍스트 레이어 %d쪽 사용, OCR %d쪽 (전체 처리 %d쪽)",
@@ -351,7 +419,7 @@ async def _extract_pdf(data: bytes) -> str:
     if not text:
         raise FileUnreadableError("파일에서 텍스트를 찾지 못했습니다.")
     try:
-        total_pages = _pdf_total_page_count(data)
+        total_pages = await asyncio.to_thread(_pdf_total_page_count, data)
     except FileUnreadableError:
         total_pages = len(layer)
     if total_pages > len(layer):
@@ -361,7 +429,7 @@ async def _extract_pdf(data: bytes) -> str:
 
 async def _ocr_pdf_pages(data: bytes, page_indexes: list[int]) -> list[str]:
     """지정한 페이지만 렌더링해 동시에 OCR한다. 반환 순서는 `page_indexes`와 같다."""
-    images = _render_pdf_pages(data, page_indexes)
+    images = await asyncio.to_thread(_render_pdf_pages, data, page_indexes)
     llm = get_file_processor_llm()
     semaphore = asyncio.Semaphore(PDF_OCR_CONCURRENCY)
 
@@ -391,12 +459,12 @@ async def _ocr_pdf_pages(data: bytes, page_indexes: list[int]) -> list[str]:
 
 async def _extract_pdf_with_ocr(data: bytes) -> str:
     """PDF의 텍스트 레이어를 사용하지 않고 모든 페이지를 이미지 OCR한다."""
-    images = _render_pdf_pages(data)
+    images = await asyncio.to_thread(_render_pdf_pages, data)
     # 실제 전체 페이지 수는 안내 문구에만 쓰는 부가 정보다 — 이미 렌더링에
     # 성공한 뒤이므로 여기서 다시 못 열더라도(예: 테스트가 렌더링만
     # 대역으로 바꾼 경우) 안내를 생략할 뿐 추출 자체를 실패시키지 않는다.
     try:
-        total_pages = _pdf_total_page_count(data)
+        total_pages = await asyncio.to_thread(_pdf_total_page_count, data)
     except FileUnreadableError:
         total_pages = len(images)
     if total_pages > len(images):
