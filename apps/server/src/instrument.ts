@@ -151,11 +151,21 @@ const isUntracedPath = (urlPath: string): boolean => {
     return path === '/health' || path.startsWith('/docs');
 };
 
+// 이 파일은 Sentry.init 전에 실행되므로 `@nestjs/common`을 미리 import하면 Nest 계측이 빠진다.
+// 경고가 필요할 때만 불러온다 (그때는 이미 init이 끝났다).
+const warnLater = (context: string, message: string): void => {
+    void import('@nestjs/common').then(({ Logger }) => Logger.warn(message, context));
+};
+
 // 디스코드 알림은 prod만 보낸다. 다른 환경은 테스트할 때만 DISCORD_ALERT_ENABLED=true로 켠다.
 const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
 const sendDiscordAlert =
     discordWebhookUrl && (appProfile === 'prod' || process.env.DISCORD_ALERT_ENABLED === 'true')
-        ? createDiscordAlert({ webhookUrl: discordWebhookUrl, sentryOrg: process.env.SENTRY_ORG })
+        ? createDiscordAlert({
+              webhookUrl: discordWebhookUrl,
+              sentryOrg: process.env.SENTRY_ORG,
+              warn: (message) => warnLater('DiscordAlert', message),
+          })
         : undefined;
 
 Sentry.init({

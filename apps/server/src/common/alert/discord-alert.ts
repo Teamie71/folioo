@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import type { ErrorEvent } from '@sentry/nestjs';
 import { createKeyThrottle } from '../utils/key-throttle.util';
 import { SENTRY_COMPONENT, SENTRY_SOURCE, type SentryComponent } from './sentry-tags';
@@ -79,6 +78,12 @@ export type DiscordAlertOptions = {
     sentryOrg?: string;
     fetchFn?: typeof fetch;
     now?: () => number;
+    /**
+     * 전송 실패 경고를 남길 함수.
+     * 이 파일은 instrument.ts가 Sentry.init 전에 불러오므로 `@nestjs/common`을 직접 import하면 안 된다.
+     * 먼저 로드되면 Sentry가 Nest Guard·Pipe·Interceptor 계측을 붙이지 못한다.
+     */
+    warn?: (message: string) => void;
 };
 
 const truncate = (value: string, max: number): string =>
@@ -217,7 +222,7 @@ export const buildDiscordMessage = (event: ErrorEvent, sentryOrg?: string): Disc
  * - 전송은 기다리지 않고, 실패해도 요청 처리와 Sentry 전송에 영향을 주지 않는다
  */
 export function createDiscordAlert(options: DiscordAlertOptions): (event: ErrorEvent) => void {
-    const logger = new Logger('DiscordAlert');
+    const warn = options.warn ?? (() => undefined);
     const fetchFn = options.fetchFn ?? fetch;
     const shouldSend = createKeyThrottle(DISCORD_ALERT_THROTTLE_MS, options.now);
 
@@ -244,11 +249,11 @@ export function createDiscordAlert(options: DiscordAlertOptions): (event: ErrorE
             .then((response) => {
                 if (response.ok) return;
                 if (response.status !== HTTP_TOO_MANY_REQUESTS) shouldSend.forget(key);
-                logger.warn(`Discord alert failed: HTTP ${response.status}`);
+                warn(`Discord alert failed: HTTP ${response.status}`);
             })
             .catch((error: unknown) => {
                 shouldSend.forget(key);
-                logger.warn(
+                warn(
                     `Discord alert failed: ${error instanceof Error ? error.message : String(error)}`
                 );
             });

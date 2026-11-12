@@ -1,5 +1,4 @@
 import type { ErrorEvent } from '@sentry/nestjs';
-import { Logger } from '@nestjs/common';
 import {
     buildDiscordMessage,
     createDiscordAlert,
@@ -156,14 +155,17 @@ describe('discord-alert', () => {
         let now: number;
         let fetchFn: jest.Mock;
         let alert: (event: ErrorEvent) => void;
+        let warn: jest.Mock;
 
         beforeEach(() => {
             now = 0;
+            warn = jest.fn();
             fetchFn = jest.fn().mockResolvedValue({ ok: true, status: 204 });
             alert = createDiscordAlert({
                 webhookUrl: 'https://discord.test/webhook',
                 fetchFn: fetchFn as unknown as typeof fetch,
                 now: () => now,
+                warn,
             });
         });
 
@@ -208,7 +210,6 @@ describe('discord-alert', () => {
         });
 
         it('전송이 실패하면 같은 에러를 5분 안에도 다시 보낸다', async () => {
-            jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
             fetchFn.mockRejectedValueOnce(new Error('timeout'));
             alert(serverError());
             await new Promise((resolve) => setImmediate(resolve));
@@ -222,7 +223,6 @@ describe('discord-alert', () => {
         });
 
         it('429(속도 제한)면 5분 제한을 유지한다', async () => {
-            jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
             fetchFn.mockResolvedValueOnce({ ok: false, status: 429 });
             alert(serverError());
             await new Promise((resolve) => setImmediate(resolve));
@@ -245,15 +245,21 @@ describe('discord-alert', () => {
             expect(fetchFn).not.toHaveBeenCalled();
         });
 
-        it('전송이 실패해도 예외를 던지지 않고 warn만 남긴다', async () => {
-            const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+        it('전송이 실패해도 예외를 던지지 않고 넘겨받은 warn으로만 남긴다', async () => {
             fetchFn.mockRejectedValueOnce(new Error('timeout'));
 
             expect(() => alert(serverError())).not.toThrow();
             await new Promise((resolve) => setImmediate(resolve));
 
             expect(warn).toHaveBeenCalledWith('Discord alert failed: timeout');
-            warn.mockRestore();
         });
+    });
+
+    it('Sentry.init 전에 로드되므로 @nestjs/common을 import하지 않는다 (Nest 계측 보존)', () => {
+        const source = jest
+            .requireActual<typeof import('node:fs')>('node:fs')
+            .readFileSync(require.resolve('./discord-alert'), 'utf8');
+
+        expect(source).not.toMatch(/from '@nestjs\//);
     });
 });
