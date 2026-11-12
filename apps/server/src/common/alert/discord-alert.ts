@@ -5,6 +5,7 @@ import { createKeyThrottle } from '../utils/key-throttle.util';
 /** 같은 에러는 5분에 한 번만 디스코드로 보낸다. 자세한 건수는 Sentry에서 본다. */
 export const DISCORD_ALERT_THROTTLE_MS = 5 * 60 * 1000;
 const DISCORD_TIMEOUT_MS = 3000;
+const HTTP_TOO_MANY_REQUESTS = 429;
 const MAX_ERROR_TEXT_LENGTH = 300;
 const MAX_PATH_LENGTH = 200;
 /** Discord embed description 제한. 넘으면 Webhook이 메시지를 거부한다. */
@@ -219,7 +220,10 @@ export function createDiscordAlert(options: DiscordAlertOptions): (event: ErrorE
 
     return (event) => {
         if (event.level && event.level !== 'error' && event.level !== 'fatal') return;
-        if (!shouldSend(dedupeKeyOf(event))) return;
+        // 전송 중에도 키를 기록해 같은 에러가 동시에 여러 번 나가지 않게 한다.
+        // 실패하면 기록을 지워 다음 에러 때 다시 보낸다. 429(속도 제한)는 재시도가 몰리지 않게 그대로 둔다.
+        const key = dedupeKeyOf(event);
+        if (!shouldSend(key)) return;
 
         let body: string;
         try {
@@ -235,9 +239,12 @@ export function createDiscordAlert(options: DiscordAlertOptions): (event: ErrorE
             signal: AbortSignal.timeout(DISCORD_TIMEOUT_MS),
         })
             .then((response) => {
-                if (!response.ok) logger.warn(`Discord alert failed: HTTP ${response.status}`);
+                if (response.ok) return;
+                if (response.status !== HTTP_TOO_MANY_REQUESTS) shouldSend.forget(key);
+                logger.warn(`Discord alert failed: HTTP ${response.status}`);
             })
             .catch((error: unknown) => {
+                shouldSend.forget(key);
                 logger.warn(
                     `Discord alert failed: ${error instanceof Error ? error.message : String(error)}`
                 );

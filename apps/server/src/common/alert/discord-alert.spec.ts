@@ -167,6 +167,8 @@ describe('discord-alert', () => {
             });
         });
 
+        afterEach(() => jest.restoreAllMocks());
+
         it('Webhook으로 JSON을 POST한다', () => {
             alert(serverError());
 
@@ -203,6 +205,38 @@ describe('discord-alert', () => {
             alert(kakaoEvent('ai-internal', { fingerprint: ['kakao', 'ai-internal', 'FAIL'] }));
 
             expect(fetchFn).toHaveBeenCalledTimes(4);
+        });
+
+        it('전송이 실패하면 같은 에러를 5분 안에도 다시 보낸다', async () => {
+            jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+            fetchFn.mockRejectedValueOnce(new Error('timeout'));
+            alert(serverError());
+            await new Promise((resolve) => setImmediate(resolve));
+
+            fetchFn.mockResolvedValueOnce({ ok: false, status: 500 });
+            alert(serverError());
+            await new Promise((resolve) => setImmediate(resolve));
+
+            alert(serverError());
+            expect(fetchFn).toHaveBeenCalledTimes(3);
+        });
+
+        it('429(속도 제한)면 5분 제한을 유지한다', async () => {
+            jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+            fetchFn.mockResolvedValueOnce({ ok: false, status: 429 });
+            alert(serverError());
+            await new Promise((resolve) => setImmediate(resolve));
+
+            alert(serverError());
+            expect(fetchFn).toHaveBeenCalledTimes(1);
+        });
+
+        it('전송 중에는 같은 에러를 또 보내지 않는다', () => {
+            fetchFn.mockReturnValue(new Promise(() => undefined));
+            alert(serverError());
+            alert(serverError());
+
+            expect(fetchFn).toHaveBeenCalledTimes(1);
         });
 
         it('error·fatal이 아닌 이벤트는 보내지 않는다', () => {

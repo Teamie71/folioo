@@ -1,6 +1,8 @@
 export type KeyThrottle = ((key: string) => boolean) & {
     /** 현재 기억하고 있는 키 수 (테스트·점검용) */
     size(): number;
+    /** 키 기록을 지워 다음 호출이 바로 통과하게 한다 (예: 보내려던 알림이 실패했을 때) */
+    forget(key: string): void;
 };
 
 /**
@@ -34,5 +36,10 @@ export function createKeyThrottle(
         return true;
     };
 
-    return Object.assign(shouldPass, { size: () => lastPassedAt.size });
+    return Object.assign(shouldPass, {
+        size: () => lastPassedAt.size,
+        forget: (key: string) => {
+            lastPassedAt.delete(key);
+        },
+    });
 }

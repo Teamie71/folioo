@@ -34,4 +34,13 @@ describe('createKeyThrottle', () => {
         expect(allow.size()).toBe(1);
         expect(allow('user-1')).toBe(true);
     });
+
+    it('forget하면 같은 키가 바로 다시 통과한다', () => {
+        const throttle = createKeyThrottle(60_000, () => 0);
+
+        expect(throttle('a')).toBe(true);
+        expect(throttle('a')).toBe(false);
+        throttle.forget('a');
+        expect(throttle('a')).toBe(true);
+    });
 });
