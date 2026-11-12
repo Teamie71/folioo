@@ -49,8 +49,10 @@ export class InternalCorrectionResultFacade {
         }
 
         if (body.status === PdfExtractionCallbackStatus.FAILED) {
-            this.logger.error(
-                `PDF extraction failed: correctionId=${correctionId}, errorMessage=${
+            // AI 오류 원문은 PDF 내용을 담을 수 있어 Sentry Logs로 보내지 않는다 (debug는 콘솔에만 남음).
+            this.logger.error(`PDF extraction failed: correctionId=${correctionId}`);
+            this.logger.debug(
+                `PDF extraction error detail: correctionId=${correctionId}, errorMessage=${
                     body.errorMessage ?? ''
                 }`
             );
