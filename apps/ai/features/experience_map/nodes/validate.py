@@ -97,6 +97,7 @@ def _validate_operations(
     aliases = state.get("alias_to_block_id", {})
     alias_metadata = state.get("alias_metadata", {})
     seen_items: set[str] = set()
+    updated_targets: set[str] = set()
     new_item_levels: dict[str, int] = {}
 
     for index, raw in enumerate(operations):
@@ -147,6 +148,17 @@ def _validate_operations(
                 alias_metadata=alias_metadata,
                 errors=errors,
             )
+            if item.target_ref in updated_targets:
+                # 커밋은 update를 순서대로 반영해 뒤 내용이 앞 내용을 덮어쓴다.
+                errors.append(
+                    _error(
+                        item_id,
+                        "duplicate_target",
+                        "같은 블록을 수정하는 operation이 둘 이상입니다.",
+                        "structure",
+                    )
+                )
+            updated_targets.add(item.target_ref or "")
 
         if item.after_ref is not None and item.after_ref not in aliases:
             errors.append(

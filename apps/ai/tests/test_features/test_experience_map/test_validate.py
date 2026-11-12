@@ -145,6 +145,35 @@ def test_gap_update_metadata_is_validated_with_structure_items():
     }
 
 
+def test_two_updates_to_same_block_route_back_to_structure():
+    """같은 블록 update가 둘이면 커밋에서 뒤 내용이 앞 내용을 덮어쓰므로 거부한다."""
+    editable_b2 = {
+        "block_id": "306",
+        "parent_alias": "b_1",
+        "level": 4,
+        "kind": "ITEM",
+        "is_text_editable": True,
+    }
+    result = validate_operations(
+        make_state(
+            alias_to_block_id={"exp_1": "101", "b_1": "305", "b_2": "306"},
+            alias_metadata={**make_state()["alias_metadata"], "b_2": editable_b2},
+            structured_items=[
+                {"item_id": "it_1", "action": "update", "target_ref": "b_2", "text": "앞"},
+                {"item_id": "it_2", "action": "update", "target_ref": "b_2", "text": "뒤"},
+            ],
+            refined_items=[
+                {"item_id": "it_1", "refined_text": "앞 내용"},
+                {"item_id": "it_2", "refined_text": "뒤 내용"},
+            ],
+        )
+    )
+
+    assert [error["code"] for error in result["validation_errors"]] == ["duplicate_target"]
+    assert result["validation_errors"][0]["item_id"] == "it_2"
+    assert next_node(result) == "structure"
+
+
 def test_level_three_update_routes_back_to_structure():
     result = validate_operations(
         make_state(
