@@ -760,3 +760,172 @@ async def test_failure_reporting_is_isolated_from_backend_settings(
     failed_usage_report.assert_awaited_once_with(
         user_id=prepared.user_id, request_id=prepared.request_id
     )
+
+
+# ===== 커밋 중 중지·점유 직후 연결 끊김·상태 준비 실패 =====
+
+
+class _UsageRecorder:
+    """`usage/failed` 호출을 기록하는 메인 서버 대역."""
+
+    def __init__(self) -> None:
+        self.failed_usage: list[tuple[str, str]] = []
+
+    async def report_failed_usage(self, *, user_id: str, request_id: str) -> None:
+        self.failed_usage.append((user_id, request_id))
+
+
+class _CommitPhaseRunner:
+    """커밋을 시작한 뒤 응답을 기다리는 동안 침묵하는 실행기."""
+
+    def __init__(self, commit_seconds: float) -> None:
+        self._commit_seconds = commit_seconds
+        self.commit_finished = False
+
+    async def run(self, state: ExperienceMapState) -> AsyncIterator[ExperienceMapEvent]:
+        mock = MockGraphRunner()
+        events = [event async for event in mock.run(state)]
+        yield NodeStatusEvent(node="commit", status="running")
+        await asyncio.sleep(self._commit_seconds)  # 메인 서버가 커밋을 반영하는 중
+        self.commit_finished = True
+        yield NodeStatusEvent(node="commit", status="completed")
+        for event in events:
+            if not isinstance(event, NodeStatusEvent):
+                yield event
+
+    async def resume(self, state: ExperienceMapState) -> AsyncIterator[ExperienceMapEvent]:
+        async for event in self.run(state):
+            yield event
+
+
+async def _prepare(service: ExperienceMapService, repo, user_id: str):
+    session = await repo.get_or_create_session(user_id, "200")
+    request_id = new_request_id()
+    prepared = await service.prepare_chat(
+        user_id,
+        session.session_id,
+        request_id,
+        user_message="정리해줘",
+        context_experience_id=None,
+        view=None,
+        stored_files=[],
+    )
+    return session.session_id, request_id, prepared
+
+
+async def _wait_until_settled(repo, user_id: str, request_id: str) -> str:
+    while (status := (await repo.get_request(user_id, request_id)).status) == "running":
+        await asyncio.sleep(0.05)
+    return status
+
+
+@pytest.mark.asyncio
+async def test_cancel_during_commit_keeps_the_committed_turn_completed(repo, user_id):
+    """커밋 중 중지는 맵이 이미 바뀌므로 요청을 실패로 기록하지 않는다.
+
+    shield로 감싼 커밋은 메인 서버에서 끝까지 반영되는데, 바깥 실행이 취소돼 요청은
+    failed/cancelled, 대화 기록은 "중단됨"이 되고 사용 횟수에서도 빠졌다.
+    """
+    runner = _CommitPhaseRunner(commit_seconds=0.6)
+    usage = _UsageRecorder()
+    service = ExperienceMapService(
+        repository=repo, runner=runner, main_client=usage, lease_renew_interval=0.1
+    )
+    session_id, request_id, prepared = await _prepare(service, repo, user_id)
+
+    async def consume() -> list[str]:
+        collected = []
+        async for event in service.stream(prepared):
+            dumped = event.model_dump()
+            collected.append(dumped["type"])
+            if dumped["type"] == "node_status" and dumped["node"] == "commit":
+                if dumped["status"] == "running":
+                    await service.cancel_request(user_id, request_id)
+        return collected
+
+    types = await asyncio.wait_for(consume(), timeout=5)
+
+    assert runner.commit_finished
+    assert "commit_result" in types
+    assert types[-1] == "processing_complete"
+    assert (await repo.get_request(user_id, request_id)).status == "completed"
+    assert usage.failed_usage == []
+    rows, _ = await repo.list_messages(user_id, session_id, cursor=None, limit=50)
+    assert [row.status for row in rows] == ["completed"]
+
+
+@pytest.mark.asyncio
+async def test_cancel_before_commit_still_cancels(repo, user_id):
+    """커밋 전 중지는 지금처럼 요청을 취소한다."""
+    usage = _UsageRecorder()
+    service = ExperienceMapService(
+        repository=repo,
+        runner=_SlowRunner(gap_seconds=5),
+        main_client=usage,
+        lease_renew_interval=0.1,
+    )
+    _, request_id, prepared = await _prepare(service, repo, user_id)
+
+    async def consume() -> list[dict]:
+        collected = []
+        async for event in service.stream(prepared):
+            collected.append(event.model_dump())
+            if collected[-1]["type"] == "node_status":
+                await service.cancel_request(user_id, request_id)
+        return collected
+
+    events = await asyncio.wait_for(consume(), timeout=4)
+
+    assert events[-1]["error"]["code"] == "cancelled"
+    assert (await repo.get_request(user_id, request_id)).status == "failed"
+    assert usage.failed_usage == [(user_id, request_id)]
+
+
+@pytest.mark.asyncio
+async def test_turn_runs_even_if_client_disconnects_before_reading_the_stream(repo, user_id):
+    """요청을 점유한 직후 SSE를 한 번도 읽지 못하고 연결이 끊겨도 요청이 끝까지 처리된다.
+
+    실행 task를 SSE generator 안에서 첫 이벤트 뒤에 만들어, 그 전에 끊기면 task가 생기지
+    않았다. 요청은 running으로 남고 세션은 점유 시간(300초) 동안 409를 받았다.
+    """
+    service = ExperienceMapService(repository=repo, runner=MockGraphRunner())
+    session_id, request_id, prepared = await _prepare(service, repo, user_id)
+
+    stream = service.stream(prepared)
+    await stream.aclose()  # 첫 이벤트를 읽기 전에 클라이언트가 떠난다.
+
+    assert await asyncio.wait_for(_wait_until_settled(repo, user_id, request_id), 4) == (
+        "completed"
+    )
+    # 같은 세션의 다음 요청이 바로 진행된다.
+    next_claim = await repo.claim_request(user_id, session_id, new_request_id(), HASH_A)
+    assert next_claim.outcome.name == "CLAIMED"
+
+
+@pytest.mark.asyncio
+async def test_state_preparation_failure_fails_the_request_with_error_event(
+    repo, user_id, monkeypatch
+):
+    """그래프 입력 state를 만들다 실패하면 오류 이벤트를 내고 요청을 실패로 정리한다.
+
+    `_build_state`가 예외 처리 밖에 있어, 오류 안내 없이 스트림이 끝나고 요청이 running으로
+    남아 세션이 5분간 잠겼다. 예: 경험 맵이 아직 없는 사용자의 첫 채팅.
+    """
+    from features.experience_map.errors import MapNotInitializedError
+
+    async def _no_map(_repository, _user_id):
+        raise MapNotInitializedError()
+
+    monkeypatch.setattr(ExperienceMapRepository, "get_map_snapshot", _no_map)
+    usage = _UsageRecorder()
+    service = ExperienceMapService(repository=repo, runner=MockGraphRunner(), main_client=usage)
+    session_id, request_id, prepared = await _prepare(service, repo, user_id)
+
+    events = [event.model_dump() async for event in service.stream(prepared)]
+
+    assert [event["type"] for event in events] == ["processing_started", "error"]
+    assert events[-1]["error"]["code"] == "map_not_initialized"
+    assert (await repo.get_request(user_id, request_id)).status == "failed"
+    assert usage.failed_usage == [(user_id, request_id)]
+    next_claim = await repo.claim_request(user_id, session_id, new_request_id(), HASH_A)
+    assert next_claim.outcome.name != "SESSION_BUSY"

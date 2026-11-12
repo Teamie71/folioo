@@ -676,3 +676,146 @@ def test_render_pdf_pages_returns_one_png_per_page():
 
     assert len(images) == 1
     assert images[0].startswith(b"\x89PNG")
+
+
+# ===== 비정상 파일이 이벤트 루프와 메모리를 막지 않는다 =====
+
+
+def _docx_with_document_xml(document_xml: bytes) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("word/document.xml", document_xml)
+    return buffer.getvalue()
+
+
+@pytest.mark.asyncio
+async def test_docx_over_uncompressed_limit_is_rejected_before_inflating(monkeypatch):
+    """압축 폭탄 DOCX는 압축을 풀기 전에 선언된 크기로 거절한다."""
+    monkeypatch.setattr(extractors, "MAX_OFFICE_XML_BYTES", 10_000, raising=False)
+    body = b"<w:document xmlns:w='w'><w:body>" + b" " * 50_000 + b"</w:body></w:document>"
+    data = _docx_with_document_xml(body)
+    assert len(data) < 1_000  # 압축률이 높은 작은 파일
+
+    def _fail_read(*_args, **_kwargs):
+        raise AssertionError("상한을 넘는 항목의 압축을 풀었습니다.")
+
+    monkeypatch.setattr(zipfile.ZipFile, "read", _fail_read)
+    monkeypatch.setattr(zipfile.ZipFile, "testzip", _fail_read)
+
+    with pytest.raises(FileUnreadableError):
+        await extract(data, "폭탄.docx", DOCX_MIME)
+
+
+@pytest.mark.asyncio
+async def test_docx_within_limit_is_still_parsed(monkeypatch):
+    monkeypatch.setattr(extractors, "MAX_OFFICE_XML_BYTES", 10_000, raising=False)
+    body = (
+        "<w:document xmlns:w='w'><w:body><w:p><w:r><w:t>정상 문서</w:t></w:r></w:p>"
+        "</w:body></w:document>"
+    ).encode()
+
+    text = await extract(_docx_with_document_xml(body), "이력서.docx", DOCX_MIME)
+
+    assert text == "정상 문서"
+
+
+@pytest.mark.asyncio
+async def test_docx_with_xml_entity_declarations_is_unreadable():
+    """DTD·엔티티 선언(억 단위 확장 공격)은 파싱하지 않고 거절한다."""
+    body = (
+        b'<?xml version="1.0"?><!DOCTYPE d [<!ENTITY a "aaaaaaaaaa">'
+        b'<!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">]>'
+        b"<w:document xmlns:w='w'><w:p><w:t>&b;</w:t></w:p></w:document>"
+    )
+
+    with pytest.raises(FileUnreadableError):
+        await extract(_docx_with_document_xml(body), "엔티티.docx", DOCX_MIME)
+
+
+async def _max_loop_stall(coro) -> tuple[object, float]:
+    """coro를 실행하는 동안 이벤트 루프가 가장 오래 멈춘 시간(초)을 잰다."""
+    loop = asyncio.get_running_loop()
+    stalls: list[float] = []
+    done = asyncio.Event()
+
+    async def _heartbeat():
+        last = loop.time()
+        while not done.is_set():
+            await asyncio.sleep(0.005)
+            now = loop.time()
+            stalls.append(now - last)
+            last = now
+
+    beat = asyncio.create_task(_heartbeat())
+    await asyncio.sleep(0)
+    try:
+        result = await coro
+    finally:
+        done.set()
+        await beat
+    return result, max(stalls, default=0.0)
+
+
+@pytest.mark.asyncio
+async def test_office_parsing_runs_off_the_event_loop(monkeypatch):
+    """DOCX 파싱이 오래 걸려도 다른 요청은 계속 처리된다."""
+    import time
+
+    def _slow_parse(_data, _filename):
+        time.sleep(0.3)
+        return "느린 문서"
+
+    monkeypatch.setattr(extractors, "_extract_office_xml", _slow_parse)
+
+    text, stall = await _max_loop_stall(extract(b"PK", "느린.docx", DOCX_MIME))
+
+    assert text == "느린 문서"
+    assert stall < 0.15
+
+
+@pytest.mark.asyncio
+async def test_pdf_rendering_runs_off_the_event_loop(monkeypatch):
+    """PDF 렌더링이 오래 걸려도 다른 요청은 계속 처리된다."""
+    import time
+
+    def _slow_render(_data, page_indexes=None):
+        time.sleep(0.3)
+        return [b"png"] * len(page_indexes or [0])
+
+    monkeypatch.setattr(extractors, "_render_pdf_pages", _slow_render)
+    monkeypatch.setattr(extractors, "get_file_processor_llm", lambda: _CaptureVisionLlm("OCR"))
+
+    text, stall = await _max_loop_stall(extractors._ocr_pdf_pages(b"%PDF", [0]))
+
+    assert text == ["OCR"]
+    assert stall < 0.15
+
+
+def _pdf_with_page_size(width: float, height: float) -> bytes:
+    import pypdfium2 as pdfium
+
+    pdf = pdfium.PdfDocument.new()
+    try:
+        pdf.new_page(width, height).close()
+        buffer = io.BytesIO()
+        pdf.save(buffer)
+        return buffer.getvalue()
+    finally:
+        pdf.close()
+
+
+def test_huge_pdf_page_is_rendered_within_pixel_limit(monkeypatch):
+    """페이지 크기가 비정상적으로 커도 렌더링 픽셀 수는 상한을 넘지 않는다."""
+    monkeypatch.setattr(extractors, "MAX_PDF_RENDER_PIXELS", 1_000_000, raising=False)
+
+    [png] = extractors._render_pdf_pages(_pdf_with_page_size(2_000, 2_000))
+
+    with Image.open(io.BytesIO(png)) as image:
+        assert image.width * image.height <= 1_000_000
+
+
+def test_normal_pdf_page_keeps_render_scale():
+    [png] = extractors._render_pdf_pages(_pdf_with_page_size(595, 842))
+
+    with Image.open(io.BytesIO(png)) as image:
+        assert (image.width, image.height) == (1190, 1684)

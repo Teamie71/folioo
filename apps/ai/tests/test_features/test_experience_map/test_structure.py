@@ -1929,6 +1929,93 @@ async def test_leaf_add_matching_existing_empty_slot_becomes_update(fake_depende
     assert item["parent_ref"] is None
 
 
+def _two_batches_filling_same_empty_slot(first_text: str, second_text: str):
+    """배치 2개가 모두 기존 빈칸 `b_3`(목적)을 고르는 상황."""
+    responses = [
+        StructureOutput(
+            items=[
+                StructureLlmItem(
+                    item_id="blk_1",
+                    action="add",
+                    parent_ref="b_2",
+                    slot_id="TASK.BASIC.PURPOSE",
+                    text=text,
+                    source_item_ids=[source_id],
+                ),
+            ],
+        )
+        for source_id, text in (("it_1", first_text), ("it_2", second_text))
+    ]
+    state = make_state(
+        alias_to_block_id={"exp_1": "101", "b_1": "305", "b_2": "306", "b_3": "307", "b_4": "308"},
+        alias_metadata={
+            "b_2": {"block_id": "306", "parent_alias": "b_1", "level": 4},
+            "b_3": {"block_id": "307", "parent_alias": "b_2", "level": 5},
+        },
+        activity_tree_text=(
+            "[exp_1] 교내 커머스 리뉴얼\n"
+            "  [b_1] (빈 블록)\n"
+            "    [b_2] 기존 담당업무 내용\n"
+            "      [b_3] (빈 블록 — 가이드: 목적)\n"
+            "      [b_4] (빈 블록 — 가이드: 조사)"
+        ),
+        new_items=[
+            {"item_id": "it_1", "text": first_text, "source": "message"},
+            {"item_id": "it_2", "text": second_text, "source": "message"},
+        ],
+    )
+    return responses, state
+
+
+@pytest.mark.asyncio
+async def test_batches_filling_same_empty_slot_merge_into_one_update(
+    fake_dependencies, monkeypatch
+):
+    """배치마다 같은 기존 빈칸을 update하면 뒤 내용이 앞 내용을 덮어쓴다 — 하나로 합친다."""
+    monkeypatch.setattr(structure_node, "MAX_SOURCE_ITEMS_PER_STRUCTURE_BATCH", 1)
+    responses, state = _two_batches_filling_same_empty_slot(
+        "이탈률을 낮추는 게 목표였다.", "재구매율도 함께 올리고 싶었다."
+    )
+    prompts = fake_dependencies(responses)
+
+    result = await structure_blocks(state)
+
+    assert len(prompts) == 2
+    updates = [item for item in result["structured_items"] if item["action"] == "update"]
+    assert [item["target_ref"] for item in updates] == ["b_3"]
+    assert updates[0]["text"] == "이탈률을 낮추는 게 목표였다. 재구매율도 함께 올리고 싶었다."
+    assert len(result["structured_items"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_merged_update_over_length_limit_spills_into_new_block_of_same_slot(
+    fake_dependencies, monkeypatch
+):
+    """합친 내용이 블록 글자 수 상한을 넘으면, 넘친 원문은 같은 칸의 새 블록으로 보낸다.
+
+    합친 채로 두면 정제·검증이 상한 초과로 거부해 요청 전체가 실패한다.
+    """
+    monkeypatch.setattr(structure_node, "MAX_SOURCE_ITEMS_PER_STRUCTURE_BATCH", 1)
+    first_text = "가" * 300
+    second_text = "나" * 300
+    responses, state = _two_batches_filling_same_empty_slot(first_text, second_text)
+    fake_dependencies(responses)
+
+    result = await structure_blocks(state)
+
+    items = result["structured_items"]
+    assert len(items) == 2
+    update, spilled = items
+    assert update["action"] == "update"
+    assert update["target_ref"] == "b_3"
+    assert update["text"] == first_text
+    assert spilled["action"] == "add"
+    assert spilled["parent_ref"] == "b_2"
+    assert spilled["slot_id"] == "TASK.BASIC.PURPOSE"
+    assert spilled["after_ref"] == "b_3"
+    assert spilled["text"] == second_text
+
+
 @pytest.mark.asyncio
 async def test_empty_item_with_invalid_slot_id_is_dropped_not_rejected(fake_dependencies):
     """내용도 없고 카탈로그에도 없는 slot_id를 단 item은 검증에 걸리지 않고 버려진다.

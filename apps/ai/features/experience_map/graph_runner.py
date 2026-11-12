@@ -96,9 +96,39 @@ class CheckpointGraphRunner:
             yield event
 
     async def resume(self, state: ExperienceMapState) -> AsyncIterator[ExperienceMapEvent]:
-        """checkpoint의 실패 지점부터 재개한다."""
-        async for event in self._stream(None, _thread_config(state)):
+        """checkpoint의 실패 지점부터 재개한다.
+
+        thread는 세션 단위라, 그래프가 시작되기 전에 실패한 요청(예: 상태 준비 실패)은
+        checkpoint가 직전 턴의 것이거나 아예 없다. 그대로 재개하면 직전 턴의 최종 state가
+        다시 나가고, 새 입력은 처리되지 않은 채 요청이 completed가 됐다. checkpoint가 이번
+        요청의 것이 아니면 새 입력으로 처음부터 실행한다.
+        """
+        config = _thread_config(state)
+        checkpoint_request_id = await self._checkpoint_request_id(config)
+        if checkpoint_request_id != state.get("request_id"):
+            logger.info(
+                "재시도할 checkpoint가 이번 요청 것이 아니라 처음부터 실행합니다 "
+                "(request_id=%s, checkpoint_request_id=%s)",
+                state.get("request_id"),
+                checkpoint_request_id,
+            )
+            input_state: ExperienceMapState | None = state
+        else:
+            input_state = None
+        async for event in self._stream(input_state, config):
             yield event
+
+    async def _checkpoint_request_id(self, config: dict) -> str | None:
+        """thread의 마지막 checkpoint가 어느 요청의 것인지 읽는다. 없으면 None.
+
+        LangGraph는 루트 그래프 checkpoint를 config의 `checkpoint_ns`와 상관없이 빈
+        namespace에 저장하고, `aget_state`는 `checkpoint_ns`를 서브그래프 경로로 해석한다.
+        그래서 thread_id만 넘겨 조회한다.
+        """
+        thread_config = {"configurable": {"thread_id": config["configurable"]["thread_id"]}}
+        snapshot = await self._graph.aget_state(thread_config)
+        value = (getattr(snapshot, "values", None) or {}).get("request_id")
+        return value if isinstance(value, str) else None
 
     async def _stream(
         self, input_state: ExperienceMapState | None, config: dict

@@ -57,6 +57,20 @@ MAX_PDF_PAGES = 10
 PDF_RENDER_SCALE = 2.0
 """PDF→이미지 렌더링 배율. 한글처럼 획이 많은 글자가 뭉개지지 않을 정도로 키운다."""
 
+MAX_PDF_RENDER_PIXELS = 16_000_000
+"""PDF 한 페이지를 렌더링할 최대 픽셀 수. 넘으면 배율을 낮춘다.
+
+A4(595×842pt)를 `PDF_RENDER_SCALE`로 그리면 약 200만 픽셀이다. 페이지 크기를 비정상적으로
+키운 553바이트 PDF 하나가 수 GB 비트맵을 만들며 서버를 18초 멈췄다.
+"""
+
+MAX_OFFICE_XML_BYTES = 10 * 1024 * 1024
+"""DOCX·PPTX에서 압축을 풀어 읽을 본문 XML의 최대 크기(전체 합계). 넘으면 거절한다.
+
+5MB 안에 들어오는 압축 폭탄(1MB → 수 GB)이 메모리를 3GB까지 키웠다. 이력서·포트폴리오
+본문 XML은 보통 수백 KB이고, 추출 텍스트도 `MAX_FILE_TEXT_CHARS`에서 잘린다.
+"""
+
 PDF_OCR_CONCURRENCY = 3
 """PDF의 페이지별 OCR 최대 동시 호출 수."""
 
