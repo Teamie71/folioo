@@ -9,6 +9,7 @@
 import { existsSync } from 'node:fs';
 import * as Sentry from '@sentry/nestjs';
 import { version } from '../package.json';
+import { createDiscordAlert } from './common/alert/discord-alert';
 
 // 이 파일은 ConfigModule보다 먼저 실행되므로 로컬 .env를 여기서 먼저 읽는다.
 // dev/prod는 컨테이너가 환경변수를 직접 넣는다. 이미 있는 환경변수는 덮어쓰지 않는다.
@@ -58,6 +59,13 @@ const isUntracedPath = (urlPath: string): boolean => {
     return path === '/health' || path.startsWith('/docs');
 };
 
+// 디스코드 알림은 prod만 보낸다. 다른 환경은 테스트할 때만 DISCORD_ALERT_ENABLED=true로 켠다.
+const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
+const sendDiscordAlert =
+    discordWebhookUrl && (appProfile === 'prod' || process.env.DISCORD_ALERT_ENABLED === 'true')
+        ? createDiscordAlert({ webhookUrl: discordWebhookUrl, sentryOrg: process.env.SENTRY_ORG })
+        : undefined;
+
 Sentry.init({
     dsn: process.env.SENTRY_DSN,
 
@@ -89,6 +97,10 @@ Sentry.init({
                 url.includes('/kakao/turns') || url.includes('/bot-api.kakao.com/'),
         }),
     ],
-    beforeSend: (event) => scrubRequest(event),
+    beforeSend: (event) => {
+        const scrubbed = scrubRequest(event);
+        sendDiscordAlert?.(scrubbed);
+        return scrubbed;
+    },
     beforeSendTransaction: (event) => (isKakaoSkillRequest(event) ? null : scrubRequest(event)),
 });

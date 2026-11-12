@@ -180,3 +180,39 @@ describe('Sentry Logs', () => {
         expect(options.beforeSendLog(info)).toBe(info);
     });
 });
+
+describe('디스코드 알림 스위치', () => {
+    const WEBHOOK = 'https://discord.test/webhook';
+    const errorEvent = () => ({
+        level: 'error',
+        exception: { values: [{ type: 'Error', value: 'boom' }] },
+        request: { url: 'https://api.folioo.ai/api/v1/blocks', headers: {} },
+    });
+
+    const sendAndCount = (env: Record<string, string | undefined>): number => {
+        const fetchSpy = jest
+            .spyOn(global, 'fetch')
+            .mockResolvedValue(new Response(null, { status: 204 }));
+        loadOptions(env).beforeSend(errorEvent());
+        return fetchSpy.mock.calls.length;
+    };
+
+    it('prod에서 Webhook URL이 있으면 에러 이벤트를 디스코드로도 보낸다', () => {
+        expect(sendAndCount({ APP_PROFILE: 'prod', DISCORD_WEBHOOK_URL: WEBHOOK })).toBe(1);
+    });
+
+    it('dev는 보내지 않고, DISCORD_ALERT_ENABLED=true일 때만 보낸다', () => {
+        expect(sendAndCount({ APP_PROFILE: 'dev', DISCORD_WEBHOOK_URL: WEBHOOK })).toBe(0);
+        expect(
+            sendAndCount({
+                APP_PROFILE: 'local',
+                DISCORD_WEBHOOK_URL: WEBHOOK,
+                DISCORD_ALERT_ENABLED: 'true',
+            })
+        ).toBe(1);
+    });
+
+    it('Webhook URL이 없으면 보내지 않는다', () => {
+        expect(sendAndCount({ APP_PROFILE: 'prod', DISCORD_WEBHOOK_URL: undefined })).toBe(0);
+    });
+});
