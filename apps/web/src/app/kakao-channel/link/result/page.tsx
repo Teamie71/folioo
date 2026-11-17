@@ -1,3 +1,3 @@
 export default function KakaoLinkResultPage() {
-  return <h1>Result Page</h1>;
+  return <h1>KakaoLinkResult Page</h1>;
 }
