@@ -45,7 +45,11 @@ export const button = recipe({
           [componentLayer]: {
             background: vars.color.bg.primary,
             color: vars.color.text.inverse,
-            selectors: { '&:hover:not(:disabled)': { background: vars.color.bg.primaryHover } },
+            selectors: {
+              '&:hover:not(:disabled)': {
+                background: vars.color.bg.primaryHover,
+              },
+            },
           },
         },
       },
@@ -56,7 +60,9 @@ export const button = recipe({
             borderColor: vars.color.border.primary,
             color: vars.color.text.selected,
             selectors: {
-              '&:hover:not(:disabled)': { background: vars.color.bg.secondaryHover },
+              '&:hover:not(:disabled)': {
+                background: vars.color.bg.secondaryHover,
+              },
             },
           },
         },
@@ -217,9 +223,15 @@ export const button = recipe({
       strong: { '@layer': { [componentLayer]: { borderWidth: 1.5 } } },
     },
     radius: {
-      small: { '@layer': { [componentLayer]: { borderRadius: vars.radius.sm } } },
-      medium: { '@layer': { [componentLayer]: { borderRadius: vars.radius.md } } },
-      full: { '@layer': { [componentLayer]: { borderRadius: vars.radius.full } } },
+      small: {
+        '@layer': { [componentLayer]: { borderRadius: vars.radius.sm } },
+      },
+      medium: {
+        '@layer': { [componentLayer]: { borderRadius: vars.radius.md } },
+      },
+      full: {
+        '@layer': { [componentLayer]: { borderRadius: vars.radius.full } },
+      },
     },
     textSize: {
       small: {
@@ -249,22 +261,41 @@ export const button = recipe({
     },
     fontWeight: {
       regular: {
-        '@layer': { [componentLayer]: { fontWeight: vars.typography.body.body2.regular.weight } },
+        '@layer': {
+          [componentLayer]: {
+            fontWeight: vars.typography.body.body2.regular.weight,
+          },
+        },
       },
       medium: {
-        '@layer': { [componentLayer]: { fontWeight: vars.typography.body.body1.medium.weight } },
+        '@layer': {
+          [componentLayer]: {
+            fontWeight: vars.typography.body.body1.medium.weight,
+          },
+        },
       },
       semibold: {
-        '@layer': { [componentLayer]: { fontWeight: vars.typography.body.body2.semibold.weight } },
+        '@layer': {
+          [componentLayer]: {
+            fontWeight: vars.typography.body.body2.semibold.weight,
+          },
+        },
       },
       bold: {
-        '@layer': { [componentLayer]: { fontWeight: vars.typography.body.body2.bold.weight } },
+        '@layer': {
+          [componentLayer]: {
+            fontWeight: vars.typography.body.body2.bold.weight,
+          },
+        },
       },
     },
     textDecoration: {
       underline: {
         '@layer': {
-          [componentLayer]: { textDecoration: 'underline', textUnderlineOffset: '5px' },
+          [componentLayer]: {
+            textDecoration: 'underline',
+            textUnderlineOffset: '5px',
+          },
         },
       },
       none: {

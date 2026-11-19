@@ -1,4 +1,9 @@
-import type { ComponentProps, CSSProperties, ReactElement, SVGProps } from 'react';
+import type {
+  ComponentProps,
+  CSSProperties,
+  ReactElement,
+  SVGProps,
+} from 'react';
 import type { vars } from '@/styles/theme';
 import { icon, iconColorVar } from './icon.css';
 
@@ -8,7 +13,14 @@ export type IconProps = Omit<ComponentProps<'span'>, 'children' | 'color'> & {
   color?: (typeof vars.color.icon)[keyof typeof vars.color.icon];
 };
 
-export function Icon({ svg, size, color, className, style, ...props }: IconProps) {
+export function Icon({
+  svg,
+  size,
+  color,
+  className,
+  style,
+  ...props
+}: IconProps) {
   const hasAccessibleName = Boolean(
     props['aria-label']?.trim() || props['aria-labelledby']?.trim(),
   );
