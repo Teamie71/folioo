@@ -5,6 +5,7 @@ import type { ExternalPortfolioUpdateInput } from 'src/modules/portfolio/applica
 import { CorrectionItemService } from 'src/modules/portfolio-correction/application/services/correction-item.service';
 import { CorrectionPortfolioSelectionService } from 'src/modules/portfolio-correction/application/services/correction-portfolio-selection.service';
 import { PortfolioCorrectionService } from 'src/modules/portfolio-correction/application/services/portfolio-correction.service';
+import { reportCorrectionAiPdfFailure } from 'src/modules/portfolio-correction/application/correction-error-reporter';
 import { PdfExtractionStatus } from 'src/modules/portfolio-correction/domain/enums/pdf-extraction-status.enum';
 import { CorrectionItem } from 'src/modules/portfolio-correction/domain/correction-item.entity';
 import {
@@ -48,11 +49,14 @@ export class InternalCorrectionResultFacade {
         }
 
         if (body.status === PdfExtractionCallbackStatus.FAILED) {
-            this.logger.error(
-                `PDF extraction failed: correctionId=${correctionId}, errorMessage=${
+            // AI 오류 원문은 PDF 내용을 담을 수 있어 Sentry Logs로 보내지 않는다 (debug는 콘솔에만 남음).
+            this.logger.error(`PDF extraction failed: correctionId=${correctionId}`);
+            this.logger.debug(
+                `PDF extraction error detail: correctionId=${correctionId}, errorMessage=${
                     body.errorMessage ?? ''
                 }`
             );
+            reportCorrectionAiPdfFailure(correctionId, correction.user.id);
             await this.portfolioCorrectionService.updatePdfExtractionStatus(
                 correctionId,
                 PdfExtractionStatus.FAILED

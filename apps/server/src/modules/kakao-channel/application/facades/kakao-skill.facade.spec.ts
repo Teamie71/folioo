@@ -2,6 +2,8 @@ import { AiExperienceSessionService } from 'src/modules/block/application/servic
 import { AiAgentUsageService } from 'src/modules/block/application/services/ai-agent-usage.service';
 import { KakaoTurnService } from 'src/modules/kakao-channel/application/services/kakao-turn.service';
 jest.mock('typeorm-transactional', () => ({ Transactional: () => () => undefined }));
+jest.mock('@sentry/nestjs', () => ({ setUser: jest.fn() }));
+import * as Sentry from '@sentry/nestjs';
 import { ConfigService } from '@nestjs/config';
 import { BlockService } from 'src/modules/block/application/services/block.service';
 import { UserService } from 'src/modules/user/application/services/user.service';
@@ -117,5 +119,26 @@ describe('KakaoSkillFacade.resolveUser', () => {
         kakaoLoginIds.set('k1', makeUser(1, UserStatus.ACTIVE, false));
         await expect(facade.resolveUser('k1')).resolves.toEqual({ kind: 'UNLINKED' });
         expect(linkService.link).not.toHaveBeenCalled();
+    });
+
+    describe('Sentry 사용자 정보', () => {
+        it('LINKED 사용자면 Sentry에 사용자 ID만 넣는다', async () => {
+            users.set(7, makeUser(7, UserStatus.ACTIVE));
+            links.set('k1', KakaoChannelLink.create(7, 'k1'));
+
+            await facade.resolveUser('k1');
+
+            expect(Sentry.setUser).toHaveBeenCalledTimes(1);
+            expect(Sentry.setUser).toHaveBeenCalledWith({ id: '7' });
+        });
+
+        it('UNLINKED나 PENDING이면 사용자를 넣지 않는다', async () => {
+            await facade.resolveUser(undefined);
+            await facade.resolveUser('unknown');
+            kakaoLoginIds.set('k2', makeUser(2, UserStatus.PENDING));
+            await facade.resolveUser('k2');
+
+            expect(Sentry.setUser).not.toHaveBeenCalled();
+        });
     });
 });

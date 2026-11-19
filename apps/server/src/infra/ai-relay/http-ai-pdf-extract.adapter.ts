@@ -56,8 +56,10 @@ export class HttpAiPdfExtractAdapter extends AiPdfExtractPort {
 
             const parsed = this.parseExtractResponse(response.data);
             if (!parsed) {
-                this.logger.error(
-                    `Unexpected AI extract response shape: ${JSON.stringify(response.data)}`
+                // 응답 본문은 PDF에서 뽑은 내용이라 Sentry Logs로 보내지 않는다 (debug는 콘솔에만 남음).
+                this.logger.error('Unexpected AI extract response shape');
+                this.logger.debug(
+                    `Unexpected AI extract response body: ${JSON.stringify(response.data)}`
                 );
                 throw new BusinessException(ErrorCode.PORTFOLIO_EXTRACT_FAILED);
             }

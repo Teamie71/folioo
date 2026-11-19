@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Transactional } from 'typeorm-transactional';
 import { Interval } from '@nestjs/schedule';
 import { randomUUID } from 'node:crypto';
+import * as Sentry from '@sentry/nestjs';
 import { AiAgentUsageService } from 'src/modules/block/application/services/ai-agent-usage.service';
 import { AiExperienceSessionService } from 'src/modules/block/application/services/ai-experience-session.service';
 import { BusinessException } from 'src/common/exceptions/business.exception';
@@ -21,6 +22,12 @@ import type {
     KakaoSkillResponse,
 } from '../dtos/kakao-skill.dto';
 import { KAKAO_MESSAGES } from '../kakao-messages';
+import {
+    reportKakaoAiRelayFailure,
+    reportKakaoAiTurnFailure,
+    reportKakaoError,
+} from '../kakao-error-reporter';
+import { checkInKakaoRecovery } from '../kakao-recovery-monitor';
 import {
     activityQuickReplies,
     linkCardResponse,
@@ -63,7 +70,8 @@ export class KakaoSkillFacade {
             const prepared = await this.prepareChat(payload, startedAt);
             if ('version' in prepared) return prepared;
             return await this.submit(prepared.userId, prepared.blockId, payload, startedAt);
-        } catch {
+        } catch (error) {
+            reportKakaoError(error, 'chat', { kakaoAppUserId: this.appUserIdOf(payload) });
             this.logger.error('Kakao chat skill failed');
             return textResponse(KAKAO_MESSAGES.ERROR);
         }
@@ -99,7 +107,8 @@ export class KakaoSkillFacade {
     async activities(payload: KakaoSkillReqDTO): Promise<KakaoSkillResDTO> {
         try {
             return await this.prepareActivities(payload, Date.now());
-        } catch {
+        } catch (error) {
+            reportKakaoError(error, 'activities', { kakaoAppUserId: this.appUserIdOf(payload) });
             this.logger.error('Kakao activities skill failed');
             return textResponse(KAKAO_MESSAGES.ERROR);
         }
@@ -130,7 +139,10 @@ export class KakaoSkillFacade {
             // 저장 트랜잭션을 마친 뒤에만 외부 AI 세션을 확보한다.
             await this.prewarm(selected.userId, selected.blockId, startedAt);
             return textResponse(KAKAO_MESSAGES.ACTIVITY_SELECTED(selected.name));
-        } catch {
+        } catch (error) {
+            reportKakaoError(error, 'select-activity', {
+                kakaoAppUserId: this.appUserIdOf(payload),
+            });
             this.logger.error('Kakao select-activity skill failed');
             return textResponse(KAKAO_MESSAGES.ERROR);
         }
@@ -214,9 +226,11 @@ export class KakaoSkillFacade {
     }
 
     private toResolved(user: User, link: KakaoChannelLink): ResolvedKakaoUser {
-        return user.status === UserStatus.PENDING
-            ? { kind: 'PENDING' }
-            : { kind: 'LINKED', userId: user.id, link };
+        if (user.status === UserStatus.PENDING) return { kind: 'PENDING' };
+
+        // 이 카카오 요청의 Folioo 사용자가 확정되는 유일한 지점. Sentry에는 ID만 보낸다.
+        Sentry.setUser({ id: String(user.id) });
+        return { kind: 'LINKED', userId: user.id, link };
     }
 
     private async activityListResponse(
@@ -289,6 +303,10 @@ export class KakaoSkillFacade {
     remaining(startedAt: number, cap = 3000): number {
         // 마지막 직렬화·트랜잭션 정리용 여유도 남긴다.
         return Math.max(0, Math.min(cap, 3800 - (Date.now() - startedAt)));
+    }
+
+    private appUserIdOf(payload: KakaoSkillReqDTO): string | undefined {
+        return payload.userRequest?.user?.properties?.appUserId;
     }
 
     failureResponse(): KakaoSkillResDTO {
@@ -369,6 +387,9 @@ export class KakaoSkillFacade {
                 },
                 timeoutMs
             );
+            if (accepted !== 'ACCEPTED') {
+                reportKakaoAiRelayFailure('submit', accepted, { userId, requestId });
+            }
             if (accepted === 'REJECTED') {
                 await this.compensate(userId, requestId, this.remaining(startedAt, 500));
                 return this.failureResponse();
@@ -382,7 +403,8 @@ export class KakaoSkillFacade {
             ) {
                 return textResponse(KAKAO_MESSAGES.DAILY_LIMIT);
             }
-            this.logger.error('Kakao turn preparation failed');
+            reportKakaoError(error, 'submit', { userId, requestId });
+            this.logger.error('Kakao turn preparation failed', { userId, requestId });
             return this.failureResponse();
         }
     }
@@ -412,7 +434,11 @@ export class KakaoSkillFacade {
     }
 
     @Transactional()
-    async complete(body: CompleteKakaoTurnReqDTO, timeoutMs = 3000): Promise<string> {
+    async complete(
+        body: CompleteKakaoTurnReqDTO,
+        timeoutMs = 3000,
+        origin: 'ai' | 'compensation' = 'ai'
+    ): Promise<string> {
         const startedAt = Date.now();
         const remaining = () => Math.max(1, timeoutMs - (Date.now() - startedAt));
         const userId = Number(body.user_id);
@@ -421,8 +447,17 @@ export class KakaoSkillFacade {
         if (!(await this.usage.hasReservation(userId, body.request_id)))
             return '카카오 턴 완료를 확인했습니다.';
         if (body.outcome === 'COMMIT_UNKNOWN') return '카카오 턴 결과를 확인하고 있습니다.';
-        if (body.outcome === 'FAILED')
+        if (body.outcome === 'FAILED') {
             await this.usage.markFailed(userId, body.request_id, remaining());
+            // ③ AI 서버가 실패로 끝낸 턴만 보낸다. 우리가 보상 처리한 턴(origin: compensation)과
+            // 이미 처리된 중복 통지(위 hasReservation)는 제외한다.
+            if (origin === 'ai') {
+                reportKakaoAiTurnFailure(body.delivery_status, {
+                    userId,
+                    requestId: body.request_id,
+                });
+            }
+        }
         await this.kakaoChannelLinkService.setQueryTimeout(remaining());
         await this.kakaoChannelLinkService.releaseTurnLock(userId, body.request_id);
         return '카카오 턴 완료를 확인했습니다.';
@@ -439,11 +474,13 @@ export class KakaoSkillFacade {
                     outcome: 'FAILED',
                     delivery_status: 'NOT_ATTEMPTED',
                 },
-                timeoutMs
+                timeoutMs,
+                'compensation'
             );
             this.rejected.delete(requestId);
-        } catch {
-            this.logger.error('Kakao rejected turn compensation failed');
+        } catch (error) {
+            reportKakaoError(error, 'compensate', { userId, requestId });
+            this.logger.error('Kakao rejected turn compensation failed', { userId, requestId });
         }
     }
 
@@ -484,13 +521,23 @@ export class KakaoSkillFacade {
                 pending.map(async (link) => {
                     try {
                         await this.recoverUser(link.userId, link.turnRequestId!);
-                    } catch {
-                        this.logger.error('Kakao turn recovery failed');
+                    } catch (error) {
+                        reportKakaoError(error, 'recover-turn', {
+                            userId: link.userId,
+                            requestId: link.turnRequestId ?? undefined,
+                        });
+                        this.logger.error('Kakao turn recovery failed', {
+                            userId: link.userId,
+                            requestId: link.turnRequestId,
+                        });
                     }
                 })
             );
-        } catch {
+            checkInKakaoRecovery('ok');
+        } catch (error) {
+            reportKakaoError(error, 'recover-scan');
             this.logger.error('Kakao pending turn scan failed');
+            checkInKakaoRecovery('error');
         } finally {
             this.recovering = false;
         }

@@ -1,6 +1,7 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
+import * as Sentry from '@sentry/nestjs';
 import { IS_PUBLIC_KEY } from 'src/common/decorators/public.decorator';
 import { ALLOW_PENDING_KEY } from 'src/common/decorators/allow-pending.decorator';
 import { BusinessException } from 'src/common/exceptions/business.exception';
@@ -88,6 +89,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         ]);
 
         await this.userService.checkUserActive(userId, allowPending);
+
+        // 이 요청의 에러·로그에 사용자 ID만 붙인다 (sendDefaultPii: false 유지).
+        Sentry.setUser({ id: String(userId) });
 
         return true;
     }
