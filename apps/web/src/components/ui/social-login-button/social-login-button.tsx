@@ -20,18 +20,27 @@ const socialTypes = {
   },
 };
 
-export type SocialLoginButtonProps = Omit<ComponentProps<'button'>, 'children'> & {
+export type SocialLoginButtonProps = Omit<
+  ComponentProps<'button'>,
+  'children'
+> & {
   socialType: keyof typeof socialTypes;
 };
 
-export function SocialLoginButton({ socialType, className, ...props }: SocialLoginButtonProps) {
+export function SocialLoginButton({
+  socialType,
+  className,
+  ...props
+}: SocialLoginButtonProps) {
   const { size, label, iconColor, Logo } = socialTypes[socialType];
   return (
     <Button
       {...props}
-      variant="social"
-      layout="withText"
-      className={[socialLoginButton({ socialType }), className].filter(Boolean).join(' ')}
+      variant='social'
+      layout='withText'
+      className={[socialLoginButton({ socialType }), className]
+        .filter(Boolean)
+        .join(' ')}
     >
       <PrefixIcon size={size} color={iconColor} svg={<Logo />} />
       {label}
