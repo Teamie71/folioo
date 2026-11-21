@@ -1,16 +1,18 @@
+import { MainLogoIcon } from '@/components/icons';
+import { Icon } from '@/components/ui/icon';
 import { text, vars } from '@folioo/bud-tokens';
-import Image from 'next/image';
 
 export default function MarketingPage() {
   return (
     <div className='flex min-h-screen flex-col'>
       <div className='mx-auto flex w-full max-w-[66rem] flex-col gap-[3.75rem] px-[1rem] pb-[6.25rem] md:min-w-[66rem] md:px-0 md:pt-[3.75rem]'>
         {/* 로고 */}
-        <Image
-          src='/icons/mainLogo-icon.svg'
-          alt='MainLogo'
-          width={128}
-          height={32}
+        <Icon
+          svg={<MainLogoIcon />}
+          className='h-[2rem] w-[8rem]'
+          color={vars.color.icon.primary}
+          role='img'
+          aria-label='Folioo 메인 로고 이미지'
         />
 
         {/* 마케팅 정보 수신 */}

@@ -3,12 +3,12 @@
   <defs>
     <style>
       .cls-1 {
-        fill: #5060c5;
+        fill: currentColor;
       }
 
       .cls-2 {
         fill: none;
-        stroke: #5060c5;
+        stroke: currentColor;
         stroke-miterlimit: 10;
         stroke-width: .04px;
       }
