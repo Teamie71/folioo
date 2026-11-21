@@ -9,7 +9,7 @@ export default function MarketingPage() {
         {/* 로고 */}
         <Icon
           svg={<MainLogoIcon />}
-          className='h-[2rem] w-[8rem]'
+          className='h-[2.5rem] w-[10rem]'
           color={vars.color.icon.primary}
           role='img'
           aria-label='Folioo 메인 로고 이미지'
