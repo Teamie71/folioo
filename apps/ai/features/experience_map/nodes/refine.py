@@ -321,8 +321,39 @@ _PAST_NOUN_ENDING = re.compile(r"(하였음|되었음|했음|됐음)(?=[.!~]*(?:
 _SENTENCE_END = re.compile(
     r"(습니다|니다|어요|아요|해요|에요|예요|이야|다|어|아|해)(?=[.!~]*(?:\s|$))"
 )
-_NOT_VERB_HAE = frozenset({"올해", "매해", "새해", "해"})
-"""'해'로 끝나지만 동사가 아닌 낱말. "올해." → "올함"이 되지 않게 한다."""
+_HAE_NOUNS = frozenset({
+    "해",
+    "공해", "재해", "수해", "상해", "가해", "유해", "무해", "살해", "박해", "냉해",  # 害
+    "화해", "분해", "독해", "양해", "곡해", "와해", "용해",  # 解
+    "동해", "서해", "남해", "황해", "심해", "근해", "영해", "항해",  # 海
+    "그해", "한해", "첫해", "매해",  # 年
+})  # fmt: skip
+"""'해'로 끝나는 명사 중 낱말 전체가 같을 때만 명사로 보는 것.
+
+"자동화해(화해)·제공해(공해)·운영해(영해)·이동해(동해)"처럼 흔한 동사의 끝과 같아서,
+끝부분만 보고 명사로 판단하면 동사 반말이 그대로 남는다.
+"""
+_HAE_NOUN_SUFFIXES = (
+    "이해", "오해", "피해", "손해", "방해", "침해", "견해", "폐해", "저해", "장해",
+    "난해", "올해", "새해", "이듬해",
+)  # fmt: skip
+"""'해'로 끝나는 명사 중 낱말 끝부분만 같아도 명사로 보는 것.
+
+"상호이해·고객피해·지난해"처럼 붙여 쓴 합성어도 지킨다. 이 끝을 가진 동사는 "회피해·용이해"
+정도라, 잘못 판단해도 반말이 남을 뿐 명사가 바뀌지는 않는다.
+"""
+_TRAILING_HANGUL = re.compile(r"[가-힣]+$")
+
+
+def _is_hae_noun(text_until_hae: str) -> bool:
+    """문장 끝 "해"가 명사의 일부인지 판단한다. 동사 반말("정리해")이면 False.
+
+    "이해·오해·피해"를 반말로 보고 "이함·오함·피함"으로 바꿔 저장하던 결함을 막는다.
+    """
+    match = _TRAILING_HANGUL.search(text_until_hae)
+    word = match.group(0) if match else ""
+    return word in _HAE_NOUNS or word.endswith(_HAE_NOUN_SUFFIXES)
+
 
 _CASUAL_ENDINGS = frozenset({"어", "아", "해", "이야", "어요", "아요", "해요", "에요", "예요"})
 """반말·해요체 어미. "분석해 타깃을…"처럼 문장 중간 연결어미와 모양이 같아서, 뒤에
@@ -346,8 +377,7 @@ def _final_of(syllable: str) -> int | None:
 def _ending_replacement(text: str, start: int, ending: str):
     """어미 하나를 무엇으로 바꿀지 정한다. `_KEEP`이면 그대로 둔다."""
     if ending == "해":
-        word = re.split(r"\s", text[: start + 1])[-1]
-        return _KEEP if word in _NOT_VERB_HAE else "함"  # 정리해 → 정리함
+        return _KEEP if _is_hae_noun(text[: start + 1]) else "함"  # 정리해 → 정리함
     if ending == "해요":
         return "함"  # 정리해요 → 정리함
     if start == 0:

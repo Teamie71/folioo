@@ -26,6 +26,7 @@ from features.experience_map.errors import (
 )
 from features.experience_map.kakao import callback as kakao_callback
 from features.experience_map.kakao.config import (
+    COMMIT_UNKNOWN_SETTLE_SECONDS,
     RECOVERY_INTERVAL_SECONDS,
     RUN_BUDGET_SECONDS,
     SESSION_WAIT_POLL_SECONDS,
@@ -335,9 +336,21 @@ class KakaoTurnService:
         return recovery.committed
 
     async def _resolve_commit_unknown(self, row: TurnRow, token: str) -> None:
-        """COMMIT_UNKNOWN 의 결과를 조회해 확정한다. 계속 불명이면 그대로 둔다."""
+        """COMMIT_UNKNOWN 의 결과를 조회해 확정한다. 계속 불명이면 그대로 둔다.
+
+        "커밋 없음"은 진행 중이던 커밋이 끝날 시간(`COMMIT_UNKNOWN_SETTLE_SECONDS`)이 지난
+        뒤에만 확정한다. 복구 루프 첫 회차에 바로 FAILED 로 확정해 실패 안내와 사용 횟수
+        제외를 했는데, 그 뒤 진행 중이던 커밋이 실제로 반영됐다.
+        """
         committed = await self._confirm_commit(row.request_id)
         if committed is None:
+            return
+        settle_at = row.expires_at + timedelta(seconds=COMMIT_UNKNOWN_SETTLE_SECONDS)
+        if committed is False and self._now() < settle_at:
+            logger.info(
+                "커밋이 아직 반영되지 않았습니다. 진행 중일 수 있어 확정을 미룹니다 (request_id=%s)",
+                row.request_id,
+            )
             return
         await self.store.resolve_commit_unknown(
             row.request_id, token, "SUCCEEDED" if committed else "FAILED"

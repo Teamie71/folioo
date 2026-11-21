@@ -530,3 +530,49 @@ async def test_retry_error_keeps_source_with_noun_ending(fake_llm):
 )
 def test_to_noun_ending_changes_only_sentence_endings(source, expected):
     assert to_noun_ending(source) == expected
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "데이터 구조에 대한 이해.",
+        "팀원 간 오해.",
+        "결제 오류로 인한 고객 피해.",
+        "재고 폐기로 인한 손해.",
+        "업무 흐름 방해.",
+        "개인정보 침해.",
+        "설비 재해.",
+        "팀원과의 화해.",
+        "서로 다른 견해.",
+        "현장 업무에 대한 깊은 이해",
+        "상호이해.",
+        "고객피해.",
+        "(이해)",
+        "지난해.",
+        "새해.",
+    ],
+)
+def test_to_noun_ending_keeps_nouns_ending_in_hae(source):
+    """ "해"로 끝나는 명사는 동사 반말로 보지 않는다 ("이해" → "이함" 결함)."""
+    assert to_noun_ending(source) == source
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("업무 흐름을 정리해.", "업무 흐름을 정리함."),
+        ("목표를 정해.", "목표를 정함."),
+        ("주간 보고를 자동화해.", "주간 보고를 자동화함."),
+        ("데이터를 시각화해.", "데이터를 시각화함."),
+        ("다른 팀과 활동해.", "다른 팀과 활동함."),
+        ("기능을 추가해.", "기능을 추가함."),
+        ("신규 서비스를 운영해.", "신규 서비스를 운영함."),
+        ("고객 정보를 제공해.", "고객 정보를 제공함."),
+        ("모두 존재해.", "모두 존재함."),
+        ("데이터를 구분해.", "데이터를 구분함."),
+        ("배송 일정을 예상해.", "배송 일정을 예상함."),
+    ],
+)
+def test_to_noun_ending_still_converts_verbs_ending_in_noun_like_hae(source, expected):
+    """명사 목록과 끝이 같은 동사("자동화해"의 "화해" 등)는 계속 바꾼다."""
+    assert to_noun_ending(source) == expected

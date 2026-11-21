@@ -1,5 +1,7 @@
 """checkpoint 기반 경험 맵 graph 재개 테스트."""
 
+from types import SimpleNamespace
+
 import pytest
 from langgraph.checkpoint.memory import InMemorySaver
 
@@ -16,8 +18,14 @@ from features.experience_map.nodes.fallback import FALLBACK_MESSAGES
 class GraphStub:
     """astream 입력을 기록하고 최종 state 하나만 내는 compiled graph 대역."""
 
-    def __init__(self) -> None:
+    def __init__(self, checkpoint_request_id: str | None = "request") -> None:
         self.calls: list[tuple[object, dict]] = []
+        self._checkpoint_request_id = checkpoint_request_id
+
+    async def aget_state(self, config):
+        if self._checkpoint_request_id is None:
+            return SimpleNamespace(values={})
+        return SimpleNamespace(values={"request_id": self._checkpoint_request_id})
 
     async def astream(self, value, config, **kwargs):
         self.calls.append((value, config, kwargs))
@@ -35,7 +43,9 @@ async def test_resume_uses_checkpoint_without_replaying_input_state():
     graph = GraphStub()
     runner = CheckpointGraphRunner(graph, state_events=events)
 
-    received = [event async for event in runner.resume({"session_id": "session-1"})]
+    received = [
+        event async for event in runner.resume({"session_id": "session-1", "request_id": "request"})
+    ]
 
     assert received[0].node == "refine"
     assert graph.calls[0][0:2] == (
@@ -46,6 +56,79 @@ async def test_resume_uses_checkpoint_without_replaying_input_state():
         "stream_mode": ["tasks", "values"],
         "durability": "sync",
     }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("checkpoint_request_id", ["previous-request", None])
+async def test_resume_runs_new_input_when_checkpoint_is_not_this_requests(checkpoint_request_id):
+    """그래프가 시작되기 전에 실패한 요청은 checkpoint가 직전 턴 것(또는 없음)이다.
+
+    그대로 재개하면 직전 턴의 최종 state가 다시 나가고, 새 입력은 처리되지 않은 채
+    요청이 completed가 됐다.
+    """
+    graph = GraphStub(checkpoint_request_id=checkpoint_request_id)
+    runner = CheckpointGraphRunner(graph, state_events=events)
+    state = {"session_id": "session-1", "request_id": "request"}
+
+    [event async for event in runner.resume(state)]
+
+    assert graph.calls[0][0] == state
+
+
+@pytest.mark.asyncio
+async def test_resume_after_pre_graph_failure_processes_new_input_on_real_graph(monkeypatch):
+    """실제 graph: 직전 턴이 끝난 thread에서 새 요청을 재시도하면 새 입력으로 실행한다."""
+    routed: list[str] = []
+
+    async def out_of_scope(state):
+        routed.append(state["request_id"])
+        return {**state, "intent": "out_of_scope", "fallback_reason": "out_of_scope"}
+
+    monkeypatch.setattr(graph_module, "route", out_of_scope)
+    runner = CheckpointGraphRunner(
+        graph_module.build_graph(checkpointer=InMemorySaver()), state_events=_state_events
+    )
+    base = {"session_id": "session-1", "user_id": "1"}
+    [event async for event in runner.run({**base, "request_id": "request-1"})]
+
+    # request-2는 그래프가 시작되기 전에 실패했고, 사용자가 재시도한다.
+    events_out = [event async for event in runner.resume({**base, "request_id": "request-2"})]
+
+    assert routed == ["request-1", "request-2"]
+    messages = [event for event in events_out if isinstance(event, MessageCompleteEvent)]
+    assert [event.message.request_id for event in messages] == ["request-2"]
+
+
+@pytest.mark.asyncio
+async def test_resume_after_mid_graph_failure_continues_from_checkpoint(monkeypatch):
+    """실제 graph: 그래프 도중 실패한 요청은 지금처럼 실패 지점부터 이어서 실행한다."""
+    routed: list[str] = []
+    outage = {"active": True}
+
+    async def out_of_scope(state):
+        routed.append(state["request_id"])
+        return {**state, "intent": "out_of_scope", "fallback_reason": "out_of_scope"}
+
+    async def flaky_fallback(state):
+        if outage["active"]:
+            raise RuntimeError("일시 오류")
+        return state
+
+    monkeypatch.setattr(graph_module, "route", out_of_scope)
+    monkeypatch.setattr(graph_module, "fallback", flaky_fallback)
+    runner = CheckpointGraphRunner(
+        graph_module.build_graph(checkpointer=InMemorySaver()), state_events=_state_events
+    )
+    state = {"session_id": "session-1", "user_id": "1", "request_id": "request-1"}
+    with pytest.raises(RuntimeError):
+        [event async for event in runner.run(state)]
+    outage["active"] = False
+
+    events_out = [event async for event in runner.resume(state)]
+
+    assert routed == ["request-1"]
+    messages = [event for event in events_out if isinstance(event, MessageCompleteEvent)]
+    assert [event.message.request_id for event in messages] == ["request-1"]
 
 
 @pytest.mark.asyncio

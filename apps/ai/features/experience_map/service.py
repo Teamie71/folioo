@@ -24,6 +24,7 @@ from app.schemas.experience_map import (
     MessageCompleteEvent,
     MessageItem,
     MessagesResponse,
+    NodeStatusEvent,
     ProcessingCompleteEvent,
     ProcessingStartedEvent,
     RequestErrorInfo,
@@ -395,30 +396,35 @@ class ExperienceMapService:
 
     # ===== 스트림 =====
 
-    async def stream(self, prepared: PreparedRequest) -> AsyncIterator[ExperienceMapEvent]:
-        """요청을 실행하며 SSE 이벤트를 낸다.
+    def stream(self, prepared: PreparedRequest) -> AsyncIterator[ExperienceMapEvent]:
+        """요청을 실행하고, 그 SSE 이벤트를 전달할 iterator를 돌려준다.
 
-        `processing_started` 로 열고 `processing_complete` 로 닫는다. 그 사이는
+        이벤트는 `processing_started` 로 열고 `processing_complete` 로 닫는다. 그 사이는
         그래프 실행기가 채운다.
+
+        실행은 SSE 연결과 분리된 task 에서 돈다. generator 안에서 직접 돌리면
+        새로고침·탭 닫기로 연결이 끊길 때 generator 가 닫히면서(GeneratorExit) 그래프
+        실행도 같이 멈춘다 — 실제로 structure·refine 까지 간 턴이 새로고침 한 번에
+        중단됐다. 연결이 끊겨도 task 는 끝까지 돌아 결과를 DB 에 남기고, 프론트는
+        `/state`·`/requests/{id}` 로 받는다.
+
+        **task 는 이 함수를 부르는 즉시 시작한다.** generator 안에서 첫 이벤트를 낸 뒤에
+        만들면, 클라이언트가 스트림을 읽기 전에 끊길 때 task 가 아예 생기지 않았다.
+        요청은 `running` 으로 남고 세션은 점유 시간(300초) 동안 새 요청에 409를 줬다.
         """
-        yield ProcessingStartedEvent(request_id=prepared.request_id)
-
         if prepared.is_replay:
-            async for event in self._replay(prepared.replay_of):
-                yield event
-            return
+            return self._replay_stream(prepared)
 
-        # 실행은 SSE 연결과 분리된 task 에서 돈다. 이 generator 안에서 직접
-        # 돌리면 새로고침·탭 닫기로 연결이 끊길 때 generator 가 닫히면서
-        # (GeneratorExit) 그래프 실행도 같이 멈춘다 — 실제로 structure·refine
-        # 까지 간 턴이 새로고침 한 번에 중단됐다. 연결이 끊겨도 task 는 끝까지
-        # 돌아 결과를 DB 에 남기고, 프론트는 `/state`·`/requests/{id}` 로 받는다.
         queue: asyncio.Queue[Any] = asyncio.Queue()
         task = asyncio.create_task(self._execute_into(prepared, queue))
         _RUNNING_TURNS.add(task)
         task.add_done_callback(_on_turn_done)
+        return _relay_events(prepared.request_id, queue)
 
-        while (event := await queue.get()) is not _STREAM_END:
+    async def _replay_stream(self, prepared: PreparedRequest) -> AsyncIterator[ExperienceMapEvent]:
+        """이미 끝난 요청의 저장 결과를 `processing_started` 부터 다시 보낸다."""
+        yield ProcessingStartedEvent(request_id=prepared.request_id)
+        async for event in self._replay(prepared.replay_of):
             yield event
 
     async def execute(self, prepared: PreparedRequest) -> AsyncIterator[ExperienceMapEvent]:
@@ -488,12 +494,14 @@ class ExperienceMapService:
 
     async def _execute(self, prepared: PreparedRequest) -> AsyncIterator[ExperienceMapEvent]:
         """그래프를 돌리고 결과를 저장한다."""
-        state = await _build_state(prepared, self.repository)
         result_payload: dict[str, Any] | None = None
         suggestion_payload: dict[str, Any] | None = None
         fallback_message: str | None = None
 
         try:
+            # 상태 준비도 실패 처리 범위 안에 둔다. 밖에 있으면 예외가 오류 이벤트 없이
+            # 스트림을 끝내고, 요청이 running 으로 남아 세션이 점유 시간 동안 잠겼다.
+            state = await _build_state(prepared, self.repository)
             async with LeaseRenewer(
                 self.repository,
                 prepared.user_id,
@@ -691,6 +699,15 @@ class ExperienceMapService:
             )
 
 
+async def _relay_events(
+    request_id: str, queue: asyncio.Queue[Any]
+) -> AsyncIterator[ExperienceMapEvent]:
+    """실행 task가 큐에 넣은 이벤트를 `processing_started` 다음에 차례로 전달한다."""
+    yield ProcessingStartedEvent(request_id=request_id)
+    while (event := await queue.get()) is not _STREAM_END:
+        yield event
+
+
 async def _interrupt_when_lease_lost(
     events: AsyncIterator[ExperienceMapEvent], renewer: LeaseRenewer
 ) -> AsyncIterator[ExperienceMapEvent]:
@@ -701,28 +718,39 @@ async def _interrupt_when_lease_lost(
     실제로 벌어진다. 작업 중지(프론트 요청, 2026-09-20)도 같은 `LeaseRenewer`
     갱신 주기에 얹히므로 같은 방식으로 끊는다.
 
+    **커밋을 시작한 뒤에는 중지 요청으로 끊지 않는다.** 커밋은 메인 서버에서 끝까지
+    반영되므로(`commit_changes`의 shield), 여기서 끊으면 맵은 바뀌었는데 요청은
+    failed/cancelled, 대화 기록은 "중단됨"이 되고 사용 횟수에서도 빠졌다. 커밋 결과가
+    정해질 때까지 기다려 그 결과대로 끝낸다. 실행권 상실은 커밋 중에도 끊는다.
+
     Raises:
         LeaseLostError: 실행 중 실행권을 잃음
-        RequestCancelledError: 사용자가 작업 중지를 요청함
+        RequestCancelledError: 커밋을 시작하기 전에 사용자가 작업 중지를 요청함
     """
     iterator = aiter(events)
     lost_wait = asyncio.create_task(renewer.lost.wait())
     cancelled_wait = asyncio.create_task(renewer.cancelled.wait())
+    commit_announced = False
+    commit_started = False
 
     def _raise_if_interrupted() -> None:
         if renewer.lost.is_set():
             raise LeaseLostError()
-        if renewer.cancelled.is_set():
+        if renewer.cancelled.is_set() and not commit_started:
             raise RequestCancelledError()
 
     try:
         while True:
             _raise_if_interrupted()
+            # 커밋 시작을 알린 실행기는 다음 이벤트를 요청받은 뒤에야 실제로 커밋한다.
+            # 그 직전까지 들어온 중지는 위에서 처리했다.
+            commit_started = commit_started or commit_announced
 
             next_event = asyncio.create_task(anext(iterator, _STREAM_END))
-            done, _ = await asyncio.wait(
-                {next_event, lost_wait, cancelled_wait}, return_when=asyncio.FIRST_COMPLETED
-            )
+            waiters = {next_event, lost_wait}
+            if not commit_started:
+                waiters.add(cancelled_wait)
+            done, _ = await asyncio.wait(waiters, return_when=asyncio.FIRST_COMPLETED)
 
             if next_event not in done:
                 next_event.cancel()
@@ -733,6 +761,12 @@ async def _interrupt_when_lease_lost(
             event = next_event.result()
             if event is _STREAM_END:
                 return
+            if (
+                isinstance(event, NodeStatusEvent)
+                and event.node == "commit"
+                and event.status == "running"
+            ):
+                commit_announced = True
             yield event
     finally:
         lost_wait.cancel()
