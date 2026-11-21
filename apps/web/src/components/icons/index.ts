@@ -1,3 +1,4 @@
 export { default as KakaoIcon } from './KakaoIcon';
+export { default as MainLogoIcon } from './MainLogoIcon';
 export { default as NaverIcon } from './NaverIcon';
 export { default as PlusIcon } from './PlusIcon';
