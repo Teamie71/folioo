@@ -1,3 +1,4 @@
+import { text, vars } from '@folioo/bud-tokens';
 import Image from 'next/image';
 
 export default function TosPage() {
@@ -17,30 +18,31 @@ export default function TosPage() {
           {/* 헤더 */}
           <div className='flex flex-col gap-[1.25rem]'>
             <div className='flex items-center gap-[1.25rem]'>
-              <span className='typo-h4 font-bold md:text-[1.5rem]'>
-                서비스 이용약관
-              </span>
+              <span className={text.header.h3}>서비스 이용약관</span>
             </div>
 
-            <p className='w-full border border-[#CDD0D5]' />
+            <p
+              className='w-full border'
+              style={{ borderColor: vars.color.border.divider }}
+            />
           </div>
 
           {/* 내용 */}
           <div className='flex flex-col gap-[1.25rem] md:px-[1.25rem]'>
-            <div className='flex w-full flex-col gap-[2.5rem] rounded-[1.75rem]'>
+            <div className='flex w-full flex-col gap-[2.5rem]'>
               {/* 제 1조 (목적) */}
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 1조 (목적) <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   본 약관은 티미(Teamie) (이하 &quot;회사&quot;)가 제공하는
                   Folioo 서비스 (이하 &quot;서비스&quot;)의 이용 조건, 절차,
                   회원의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 2조 (용어의 정의) <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   본 약관에서 사용하는 주요 용어의 정의는 다음과 같습니다.{' '}
                   <br />
                   <span className='ml-[0.25rem] block'>
@@ -56,9 +58,9 @@ export default function TosPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 3조 (이용권의 소진 순서 및 유효기간) <br />
-                <p className='font-regular typo-c1 ml-[0.25rem] leading-[150%] md:text-[1.125rem]'>
+                <p className={`ml-[0.25rem] ${text.body.body1.regular}`}>
                   1. 소진 순서
                   <br />
                   {'\u00A0\u00A0'}
@@ -82,10 +84,10 @@ export default function TosPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 4조 (청약철회 및 환불 정책)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   회사는「전자상거래 등에서의 소비자보호에 관한 법률」 및
                   「콘텐츠이용자보호지침」에 따라 아래와 같은 환불 규정을
                   적용합니다.
@@ -152,10 +154,10 @@ export default function TosPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 5조 (AI 서비스의 한계 및 면책 조항)
                 <br />
-                <p className='font-regular typo-c1 ml-[0.25rem] leading-[150%] md:text-[1.125rem]'>
+                <p className={`ml-[0.25rem] ${text.body.body1.regular}`}>
                   1. 회사가 제공하는 서비스는 외부 인공지능 모델을 기반으로
                   결과물을 분석 및 생성합니다. 기술적 한계로 인해 생성된
                   결과물에는 사실과 다르거
@@ -178,10 +180,10 @@ export default function TosPage() {
                 </p>
               </div>
 
-              <div className='typo-c1 font-bold text-[#1A1A1A] md:text-[1.125rem]'>
+              <div className={text.header.h4}>
                 제 6조 (서비스의 중단 및 책임 제한)
                 <br />
-                <p className='font-regular typo-c1 ml-[0.25rem] leading-[150%] md:text-[1.125rem]'>
+                <p className={`ml-[0.25rem] ${text.body.body1.regular}`}>
                   1. 회사는 정기 점검, 외부 API의 연동 장애, 클라우드 서버 오류,
                   통신 장애 등 불가피한 사유가 발생한 경우 서비스 제공을
                   일시적으로 중단할 수
@@ -214,10 +216,10 @@ export default function TosPage() {
                 </p>
               </div>
 
-              <div className='typo-c1 font-bold text-[#1A1A1A] md:text-[1.125rem]'>
+              <div className={text.header.h4}>
                 제 7조 (약관의 효력 및 변경)
                 <br />
-                <p className='font-regular typo-c1 ml-[0.25rem] leading-[150%] md:text-[1.125rem]'>
+                <p className={`ml-[0.25rem] ${text.body.body1.regular}`}>
                   1. 본 약관은 2026년 3월 9일부터 적용됩니다.
                   <br />
                   2. 법령·정책·서비스 변경에 따라 내용이 변경될 경우, 변경 사유

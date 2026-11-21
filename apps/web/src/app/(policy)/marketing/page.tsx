@@ -1,3 +1,4 @@
+import { text, vars } from '@folioo/bud-tokens';
 import Image from 'next/image';
 
 export default function MarketingPage() {
@@ -17,20 +18,21 @@ export default function MarketingPage() {
           {/* 헤더 */}
           <div className='flex flex-col gap-[1.25rem]'>
             <div className='flex items-center gap-[1.25rem]'>
-              <span className='typo-h4 font-bold md:text-[1.5rem]'>
-                마케팅 정보 수신
-              </span>
+              <span className={text.header.h3}>마케팅 정보 수신</span>
             </div>
 
-            <p className='w-full border border-[#CDD0D5]' />
+            <p
+              className='w-full border'
+              style={{ borderColor: vars.color.border.divider }}
+            />
           </div>
 
           {/* 내용 */}
           <div className='flex flex-col gap-[1.25rem] md:px-[1.25rem]'>
             <div className='flex w-full flex-col gap-[2.5rem]'>
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 1조 (목적) <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   이 약관은 티미(Teamie) (이하 &quot;회사&quot;)는 회사가
                   제공하는 Folioo 서비스 (이하 &quot;서비스&quot;) 이용자에게
                   마케팅 정보(서비스 업데이트, 이벤트·프로모션, 설문조사, 신규
@@ -40,10 +42,10 @@ export default function MarketingPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 2조 (정의)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   <span className='ml-[0.25rem] block'>
                     1. &quot;마케팅 정보&quot;란 회사가 제공하는 서비스 관련
                     소식, 이벤트·프로모션, 설문조사, 신규 기능 안내 등을
@@ -55,11 +57,11 @@ export default function MarketingPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 3조 (수집 및 이용 항목)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
-                  본 약관에서 사용하는 주요 용어의 정의는 다음과 같습니다.{' '}
+                <p className={text.body.body1.regular}>
+                  본 약관에서 사용하는 주요 용어의 정의는 다음과 같습니다.
                   <br />
                   <span className='ml-[0.25rem] block'>
                     1. 수집 항목
@@ -74,10 +76,10 @@ export default function MarketingPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 4조 (수신 방법)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   회사는 본 약관에 동의한 이용자에게 아래 채널을 통해 마케팅
                   정보를 발신할 수 있습니다.
                   <br />
@@ -85,10 +87,10 @@ export default function MarketingPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 5조 (보유 및 이용 기간)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   <span className='ml-[0.25rem] block'>
                     1. 수신 동의 철회 전까지 회사는 동의 정보를 보유·이용합니다.
                     <br />
@@ -102,11 +104,11 @@ export default function MarketingPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 6조 (동의 거부 및 철회 방법)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
-                  본 약관에서 사용하는 주요 용어의 정의는 다음과 같습니다.{' '}
+                <p className={text.body.body1.regular}>
+                  본 약관에서 사용하는 주요 용어의 정의는 다음과 같습니다.
                   <br />
                   <span className='ml-[0.25rem] block'>
                     1. 서비스 내의 [프로필 &gt; &apos;마케팅 정보 수신
@@ -115,10 +117,10 @@ export default function MarketingPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 7조 (동의 거부에 따른 불이익)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   <span className='ml-[0.25rem] block'>
                     1. 본 동의는 선택 사항이므로 동의를 거부하실 수 있습니다.
                     동의를 거부하시더라도 서비스의 가입 및 이용에는 아무런
@@ -130,10 +132,10 @@ export default function MarketingPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 8조 (약관의 효력 및 변경)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   <span className='ml-[0.25rem] block'>
                     1. 본 약관은 2026년 3월 9일부터 적용됩니다.
                     <br />

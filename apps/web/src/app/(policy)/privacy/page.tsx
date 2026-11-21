@@ -1,3 +1,4 @@
+import { text, vars } from '@folioo/bud-tokens';
 import Image from 'next/image';
 
 export default function PrivacyPage() {
@@ -17,19 +18,20 @@ export default function PrivacyPage() {
           {/* 헤더 */}
           <div className='flex flex-col gap-[1.25rem]'>
             <div className='flex items-center gap-[1.25rem]'>
-              <span className='typo-h4 font-bold md:text-[1.5rem]'>
-                개인정보 처리방침
-              </span>
+              <span className={text.header.h3}>개인정보 처리방침</span>
             </div>
 
-            <p className='w-full border border-[#CDD0D5]' />
+            <p
+              className='w-full border'
+              style={{ borderColor: vars.color.border.divider }}
+            />
           </div>
 
           {/* 내용 */}
           <div className='flex flex-col gap-[1.25rem] md:px-[1.25rem]'>
             <div className='flex w-full flex-col gap-[2.5rem]'>
               {/* 서문 */}
-              <div className='typo-c1 flex flex-col leading-[150%] text-[#1A1A1A] md:text-[1.125rem]'>
+              <div className={text.body.body1.regular}>
                 <p>
                   티미(Teamie) (이하 &quot;회사&quot;)는 회사가 제공하는 Folioo
                   서비스 (이하 &quot;서비스&quot;)를 이용하는 이용자 (이하
@@ -46,10 +48,10 @@ export default function PrivacyPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 1조 (개인정보의 처리 목적)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   회사는 다음의 목적을 위하여 개인정보를 처리합니다.
                   <br />
                   처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지
@@ -75,10 +77,10 @@ export default function PrivacyPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 2조 (수집하는 개인정보의 항목)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   <span className='ml-[0.25rem] block'>
                     1. 회원가입 시 필수 수집 항목
                     <br />
@@ -103,10 +105,10 @@ export default function PrivacyPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 3조 (개인정보의 처리 및 보유 기간)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   회사는 법령에 따른 개인정보 보유·이용기간 또는 정보주체로부터
                   개인정보를 수집 시에 동의 받은 기간 내에서 개인정보를 처리 및
                   보유합니다.
@@ -145,10 +147,10 @@ export default function PrivacyPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 4조 (개인정보의 제 3자 제공 및 처리 위탁)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   <span className='ml-[0.25rem] block'>
                     1. 개인정보 처리 위탁
                     <br />
@@ -178,10 +180,10 @@ export default function PrivacyPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 5조 (정보주체의 권리, 의무 및 행사방법)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   정보주체는 언제든지 본인의 개인정보 열람, 정정,
                   삭제(회원탈퇴)를 요구할 수 있습니다. 탈퇴 시 제3조에 명시된
                   보관 정보를 제외한 개인 식별
@@ -190,10 +192,10 @@ export default function PrivacyPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 6조 (개인정보 보호책임자 및 담당자 연락처)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   회사는 개인정보 처리에 관한 업무를 총괄하여 책임지는 개인정보
                   보호책임자를 지정하고 있습니다.
                   <span className='ml-[0.25rem] block'>
@@ -204,10 +206,10 @@ export default function PrivacyPage() {
                 </p>
               </div>
 
-              <div className='typo-c1-sb text-[#1A1A1A] md:text-[1.125rem] md:font-bold'>
+              <div className={text.header.h4}>
                 제 7조 (개인정보처리방침의 효력 및 변경)
                 <br />
-                <p className='font-regular typo-c1 leading-[150%] md:text-[1.125rem]'>
+                <p className={text.body.body1.regular}>
                   <span className='ml-[0.25rem] block'>
                     1. 본 방침은 2026년 3월 9일부터 적용됩니다.
                     <br />
