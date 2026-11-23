@@ -22,7 +22,7 @@ export default function TosPage() {
         />
 
         {/* 서비스 이용 약관 */}
-        <div className='flex flex-col gap-[3.125rem]'>
+        <div className='flex flex-col gap-[3.75rem]'>
           {/* 헤더 */}
           <div className='flex flex-col gap-[1.25rem]'>
             <div className='flex items-center gap-[1.25rem]'>
@@ -43,8 +43,8 @@ export default function TosPage() {
             </div>
 
             <p
-              className='w-full border'
-              style={{ borderColor: vars.color.border.divider }}
+              className='w-full border-t'
+              style={{ borderColor: vars.color.border.button }}
             />
           </div>
 

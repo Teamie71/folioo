@@ -22,7 +22,7 @@ export default function PrivacyPage() {
         />
 
         {/* 개인정보 처리방침 */}
-        <div className='flex flex-col gap-[3.125rem]'>
+        <div className='flex flex-col gap-[3.75rem]'>
           {/* 헤더 */}
           <div className='flex flex-col gap-[1.25rem]'>
             <div className='flex items-center gap-[1.25rem]'>
@@ -43,8 +43,8 @@ export default function PrivacyPage() {
             </div>
 
             <p
-              className='w-full border'
-              style={{ borderColor: vars.color.border.divider }}
+              className='w-full border-t'
+              style={{ borderColor: vars.color.border.button }}
             />
           </div>
 
