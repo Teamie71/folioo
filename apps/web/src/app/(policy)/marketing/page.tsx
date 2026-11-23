@@ -1,8 +1,14 @@
-import { MainLogoIcon } from '@/components/icons';
+'use client';
+
+import { ChevronLeftIcon, MainLogoIcon } from '@/components/icons';
+import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { text, vars } from '@folioo/bud-tokens';
+import { useRouter } from 'next/navigation';
 
 export default function MarketingPage() {
+  const router = useRouter();
+
   return (
     <div className='flex min-h-screen flex-col'>
       <div className='mx-auto flex w-full max-w-[66rem] flex-col gap-[3.75rem] px-[1rem] pb-[6.25rem] md:px-0 md:pt-[3.75rem]'>
@@ -20,6 +26,19 @@ export default function MarketingPage() {
           {/* 헤더 */}
           <div className='flex flex-col gap-[1.25rem]'>
             <div className='flex items-center gap-[1.25rem]'>
+              <Button
+                variant='text'
+                layout='iconOnly'
+                aria-label='뒤로가기'
+                size='fit'
+                onClick={() => router.back()}
+              >
+                <Icon
+                  svg={<ChevronLeftIcon />}
+                  size={28}
+                  color={vars.color.icon.strong}
+                />
+              </Button>
               <span className={text.header.h3}>마케팅 정보 수신</span>
             </div>
 
