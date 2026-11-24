@@ -1,3 +1,4 @@
+export { default as BlurredLogoIcon } from './BlurredLogoIcon';
 export { default as ChevronLeftIcon } from './ChevronLeftIcon';
 export { default as KakaoIcon } from './KakaoIcon';
 export { default as MainLogoIcon } from './MainLogoIcon';
