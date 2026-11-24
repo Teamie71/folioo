@@ -17,6 +17,11 @@
 }
 
 @layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
     background: var(--bud-color-bg-default);
     color: var(--bud-color-text-default);
