@@ -5,6 +5,7 @@ import re
 
 from common.llm import get_experience_map_llm
 from features.experience_map.config import (
+    MAX_CONTENT_LENGTH,
     MAX_FILE_SOURCE_CHARS_PER_STRUCTURE_BATCH,
     MAX_FILE_SOURCE_ITEMS_PER_STRUCTURE_BATCH,
     MAX_SOURCE_CHARS_PER_STRUCTURE_BATCH,
@@ -386,7 +387,10 @@ async def structure_blocks(state: ExperienceMapState) -> ExperienceMapState:
                 ),
                 catalog,
             )
-            ordered_items = _order_parents_before_children(redirected_existing)
+            merged_updates = _merge_updates_to_same_target(
+                redirected_existing, cumulative_source_text, catalog, state
+            )
+            ordered_items = _order_parents_before_children(merged_updates)
             try:
                 validated = _validate_output(
                     ordered_items,
@@ -3678,6 +3682,114 @@ def _redirect_leaf_add_to_existing_empty_slot(
                 continue
         result.append(item)
     return result if changed else items
+
+
+def _merge_updates_to_same_target(
+    items: list[StructureLlmItem],
+    source_text: dict[str, str],
+    catalog: TemplateCatalog,
+    state: ExperienceMapState,
+) -> list[StructureLlmItem]:
+    """같은 기존 블록을 고친 update가 여러 개면 원문을 합쳐 update 하나로 만든다.
+
+    배치가 2개 이상이면 배치마다 같은 기존 빈칸을 골라 update를 따로 만든다. 앞 배치의
+    update는 `slot_id`를 비우므로 다음 배치 안내(`_render_previous_batch_lines`)에 빠지고,
+    다음 배치는 그 칸을 여전히 빈칸으로 본다. 둘 다 커밋되면 뒤 내용이 앞 내용을 덮어썼다.
+    같은 부모·같은 slot을 합치는 `_merge_duplicate_slot_items`와 같은 규칙이다.
+
+    합친 내용이 블록 글자 수 상한을 넘으면 넘친 원문은 같은 칸의 새 블록(add)으로
+    보낸다. 파일 경로(`file_pipeline/tree.py`의 `_join`)와 같은 처리다. 합친 채로 두면
+    정제·검증이 상한 초과로 거부해 요청 전체가 실패했다.
+    """
+    groups: dict[str, list[StructureLlmItem]] = {}
+    for item in items:
+        if item.action == "update" and item.target_ref is not None:
+            groups.setdefault(item.target_ref, []).append(item)
+    duplicated = {target for target, group in groups.items() if len(group) > 1}
+    if not duplicated:
+        return items
+
+    tree_lines = _parse_tree_lines(state.get("activity_tree_text") or "")
+    placeholder_to_slot = _placeholder_to_slot_map(catalog)
+    known_slots = {
+        alias: (slot_id, parent_alias)
+        for slot_id, alias, parent_alias in _subtree_known_slots_with_parent(
+            tree_lines, state.get("target_experience_alias") or "", placeholder_to_slot
+        )
+    }
+
+    result: list[StructureLlmItem] = []
+    for item in items:
+        target = item.target_ref if item.action == "update" else None
+        if target not in duplicated:
+            result.append(item)
+            continue
+        group = groups[target]
+        if item is not group[0]:
+            continue
+        source_ids: list[str] = []
+        for member in group:
+            source_ids.extend(sid for sid in member.source_item_ids if sid not in source_ids)
+        if not source_ids:
+            result.append(item)
+            continue
+        chunks = _pack_sources_by_length(source_ids, source_text)
+        slot_and_parent = known_slots.get(target)
+        if len(chunks) == 1 or slot_and_parent is None:
+            result.append(
+                item.model_copy(
+                    update={
+                        "source_item_ids": source_ids,
+                        "text": _joined_source_text(source_ids, source_text),
+                    }
+                )
+            )
+            continue
+        slot_id, parent_alias = slot_and_parent
+        result.append(
+            item.model_copy(
+                update={
+                    "source_item_ids": chunks[0],
+                    "text": _joined_source_text(chunks[0], source_text),
+                }
+            )
+        )
+        for index, chunk in enumerate(chunks[1:], start=1):
+            result.append(
+                StructureLlmItem(
+                    item_id=f"{item.item_id}_spill{index}",
+                    action="add",
+                    parent_ref=parent_alias,
+                    slot_id=slot_id,
+                    after_ref=target if index == 1 else None,
+                    text=_joined_source_text(chunk, source_text),
+                    source_item_ids=chunk,
+                )
+            )
+    logger.info("structure: 같은 블록 update 병합 %s", sorted(duplicated))
+    return result
+
+
+def _joined_source_text(source_ids: list[str], source_text: dict[str, str]) -> str | None:
+    """원문 item을 `_reconstruct_verbatim_text`와 같은 방식으로 이어 붙인다."""
+    if any(sid not in source_text for sid in source_ids):
+        return None
+    return " ".join(source_text[sid].strip() for sid in source_ids)
+
+
+def _pack_sources_by_length(source_ids: list[str], source_text: dict[str, str]) -> list[list[str]]:
+    """원문 순서를 지키며, 이어 붙인 길이가 블록 글자 수 상한을 넘지 않게 나눈다."""
+    chunks: list[list[str]] = []
+    length = 0
+    for sid in source_ids:
+        text_length = len(source_text.get(sid, "").strip())
+        if chunks and length + 1 + text_length <= MAX_CONTENT_LENGTH:
+            chunks[-1].append(sid)
+            length += 1 + text_length
+        else:
+            chunks.append([sid])
+            length = text_length
+    return chunks
 
 
 def _validate_non_empty_subtrees(items: list[StructureLlmItem], catalog: TemplateCatalog) -> None:

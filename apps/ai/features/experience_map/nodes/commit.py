@@ -127,6 +127,10 @@ async def _recover_map_conflict(
     old_aliases = state.get("alias_to_block_id", {})
     new_aliases = refreshed.get("alias_to_block_id", {})
     remapped, structure_maintained = _remap_operations(state, old_aliases, new_aliases)
+    if structure_maintained and _update_targets_changed(state, refreshed, old_aliases):
+        # 이전 update는 옛 내용을 기준으로 만든 것이다. 그대로 다시 커밋하면 그사이
+        # 사용자가 고친 내용을 덮어쓴다. 최신 내용으로 구조화부터 다시 한다.
+        structure_maintained = False
 
     updated = dict(refreshed)
     updated["current_node"] = "commit"
@@ -147,6 +151,27 @@ async def _recover_map_conflict(
     else:
         updated["commit_recovery_node"] = "structure"
     return updated  # type: ignore[return-value]
+
+
+def _update_targets_changed(
+    state: ExperienceMapState, refreshed: ExperienceMapState, old_aliases: dict[str, str]
+) -> bool:
+    """update 대상 칸의 내용이 커밋을 준비한 뒤 최신 맵에서 바뀌었는지 본다.
+
+    빈 칸은 내용 매핑에 없으므로, 빈 칸이 채워진 경우도 바뀐 것으로 본다.
+    """
+    old_contents = state.get("block_id_to_content", {})
+    new_contents = refreshed.get("block_id_to_content", {})
+    operations = [*state.get("structured_items", []), state.get("gap_update_item")]
+    for operation in operations:
+        if not operation or operation.get("action") != "update":
+            continue
+        block_id = old_aliases.get(operation.get("target_ref") or "")
+        if block_id is None:
+            continue
+        if old_contents.get(block_id) != new_contents.get(block_id):
+            return True
+    return False
 
 
 def _remap_operations(

@@ -858,8 +858,8 @@ class LeaseRenewer:
         self.lost = asyncio.Event()
         self.cancelled = asyncio.Event()
         """사용자가 작업 중지를 요청했다 (프론트 요청, 2026-09-20). `lost`와
-        달리 우리는 여전히 실행권을 갖고 있다 — 호출자가 스스로 실패로
-        정리해야 한다."""
+        달리 우리는 여전히 실행권을 갖고 있다 — 호출자가 스스로 정리해야 한다.
+        커밋 전이면 실패로, 커밋을 시작했으면 커밋 결과대로 끝낸다."""
 
     async def __aenter__(self) -> "LeaseRenewer":
         self._task = asyncio.create_task(self._loop())
@@ -888,10 +888,12 @@ class LeaseRenewer:
                 logger.warning("lease 를 잃었습니다 (request_id=%s)", self._request_id)
                 self.lost.set()
                 return
-            if cancel_requested:
+            if cancel_requested and not self.cancelled.is_set():
+                # 갱신은 계속한다. 커밋을 시작한 뒤의 중지는 커밋 결과가 나올 때까지
+                # 실행을 이어 가므로(`service._interrupt_when_lease_lost`), 그동안
+                # lease 가 만료되면 안 된다.
                 logger.info("사용자 요청으로 중지합니다 (request_id=%s)", self._request_id)
                 self.cancelled.set()
-                return
 
 
 _repository: ExperienceMapRepository | None = None
