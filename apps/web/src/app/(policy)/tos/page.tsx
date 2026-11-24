@@ -44,7 +44,7 @@ export default function TosPage() {
 
             <p
               className='w-full border-t'
-              style={{ borderColor: vars.color.border.button }}
+              style={{ borderColor: vars.color.border.divider }}
             />
           </div>
 
