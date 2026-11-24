@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { HttpService } from '@nestjs/axios';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BusinessException } from 'src/common/exceptions/business.exception';
 import { ErrorCode } from 'src/common/exceptions/error-code.enum';
@@ -136,6 +137,33 @@ describe('HttpAiPdfExtractAdapter', () => {
             await expect(adapter.extractText(1, fileBuffer, 'x.pdf')).rejects.toThrow(
                 BusinessException
             );
+        });
+
+        it('응답 형식이 다르면 error 로그에는 응답 본문을 넣지 않고 debug에만 남긴다', async () => {
+            const logError = jest
+                .spyOn(Logger.prototype, 'error')
+                .mockImplementation(() => undefined);
+            const logDebug = jest
+                .spyOn(Logger.prototype, 'debug')
+                .mockImplementation(() => undefined);
+            configServiceStub.mockGet.mockImplementation((key: string) => {
+                if (key === 'AI_BASE_URL') return 'https://ai.example.com';
+                if (key === 'AI_SERVICE_API_KEY') return 'valid-key';
+                return undefined;
+            });
+            httpServiceStub.axiosRef.post.mockResolvedValue({
+                data: { extracted_text: '지원자 이력서 본문' },
+            });
+
+            await expect(adapter.extractText(1, Buffer.from('pdf'), 'x.pdf')).rejects.toThrow(
+                BusinessException
+            );
+
+            expect(logError).toHaveBeenCalledWith('Unexpected AI extract response shape');
+            expect(JSON.stringify(logError.mock.calls)).not.toContain('이력서 본문');
+            expect(JSON.stringify(logDebug.mock.calls)).toContain('이력서 본문');
+            logError.mockRestore();
+            logDebug.mockRestore();
         });
     });
 });

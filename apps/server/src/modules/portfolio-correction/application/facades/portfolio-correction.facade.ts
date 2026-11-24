@@ -16,6 +16,7 @@ import { CorrectionPortfolioSelectionService } from '../services/correction-port
 import { PortfolioCorrection } from '../../domain/portfolio-correction.entity';
 import { Portfolio } from 'src/modules/portfolio/domain/portfolio.entity';
 import { CorrectionStatus } from '../../domain/enums/correction-status.enum';
+import { reportCorrectionError } from '../correction-error-reporter';
 
 @Injectable()
 export class PortfolioCorrectionFacade {
@@ -88,7 +89,7 @@ export class PortfolioCorrectionFacade {
         const items = await this.replaceCorrectionItems(correctionId, correction, portfolios);
         await this.portfolioCorrectionService.transitionToGenerating(correctionId);
 
-        void this.delegateCorrectionGeneration(correctionId);
+        void this.delegateCorrectionGeneration(correctionId, userId);
 
         return items;
     }
@@ -103,10 +104,13 @@ export class PortfolioCorrectionFacade {
             return;
         }
 
-        void this.delegateCompanyInsightCreation(correctionId);
+        void this.delegateCompanyInsightCreation(correctionId, userId);
     }
 
-    private async delegateCorrectionGeneration(correctionId: number): Promise<void> {
+    private async delegateCorrectionGeneration(
+        correctionId: number,
+        userId: number
+    ): Promise<void> {
         try {
             await this.aiRelayPort.postJson({
                 path: `/api/v1/corrections/${correctionId}/generate`,
@@ -116,11 +120,15 @@ export class PortfolioCorrectionFacade {
             const message = `Failed to delegate correction generation to AI server: correctionId=${correctionId}`;
             const stack = error instanceof Error ? error.stack : undefined;
             this.logger.error(message, stack);
-            void this.fallbackToStatus(correctionId, CorrectionStatus.FAILED);
+            reportCorrectionError(error, 'generate', correctionId, userId);
+            void this.fallbackToStatus(correctionId, userId, CorrectionStatus.FAILED);
         }
     }
 
-    private async delegateCompanyInsightCreation(correctionId: number): Promise<void> {
+    private async delegateCompanyInsightCreation(
+        correctionId: number,
+        userId: number
+    ): Promise<void> {
         try {
             await this.aiRelayPort.postJson({
                 path: `/api/v1/corrections/${correctionId}/rag`,
@@ -130,12 +138,14 @@ export class PortfolioCorrectionFacade {
             const message = `Failed to delegate company insight generation to AI server: correctionId=${correctionId}`;
             const stack = error instanceof Error ? error.stack : undefined;
             this.logger.error(message, stack);
-            void this.fallbackToStatus(correctionId, CorrectionStatus.RAG_FAILED);
+            reportCorrectionError(error, 'rag', correctionId, userId);
+            void this.fallbackToStatus(correctionId, userId, CorrectionStatus.RAG_FAILED);
         }
     }
 
     private async fallbackToStatus(
         correctionId: number,
+        userId: number,
         status: CorrectionStatus.FAILED | CorrectionStatus.RAG_FAILED
     ): Promise<void> {
         try {
@@ -146,6 +156,7 @@ export class PortfolioCorrectionFacade {
                 `Failed to transition correction to ${status} status: correctionId=${correctionId}`,
                 stack
             );
+            reportCorrectionError(error, 'fallback-status', correctionId, userId);
         }
     }
 

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { isAxiosError } from 'axios';
 import { Transactional } from 'typeorm-transactional';
 import { BusinessException } from 'src/common/exceptions/business.exception';
 import { ErrorCode } from 'src/common/exceptions/error-code.enum';
@@ -7,6 +8,7 @@ import { UserService } from 'src/modules/user/application/services/user.service'
 import { KakaoOAuthClient } from '../../infrastructure/clients/kakao-oauth.client';
 import { KakaoChannelLinkService } from '../services/kakao-channel-link.service';
 import { KakaoLinkTokenService } from '../services/kakao-link-token.service';
+import { reportKakaoLinkFailure } from '../kakao-error-reporter';
 import type { KakaoLinkState } from '../services/kakao-link-token.service';
 import type {
     KakaoLinkAuthorizeResDTO,
@@ -52,9 +54,12 @@ export class KakaoLinkFacade {
             return this.resultUrl({
                 linkToken: this.tokenService.signLinkToken(state.uid, kakaoUserId),
             });
-        } catch {
+        } catch (error) {
             // Axios 예외에는 code·client_secret·액세스 토큰이 들어갈 수 있으므로 원문을 기록하지 않는다.
             this.logger.error('Kakao linking callback failed');
+            reportKakaoLinkFailure(isAxiosError(error) ? error.response?.status : undefined, {
+                userId: state.uid,
+            });
             return this.resultUrl({ error: 'FAILED' });
         }
     }
