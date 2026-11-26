@@ -469,7 +469,9 @@ export class KakaoSkillFacade {
 
     @Interval(10_000)
     async recoverPending(): Promise<void> {
-        if (this.recovering) return;
+        const recoveryDisabled =
+            this.configService.get<string>('KAKAO_TURN_RECOVERY_ENABLED') === 'false';
+        if (recoveryDisabled || this.recovering) return;
         this.recovering = true;
         try {
             // 연결 행이 삭제되거나 새 턴으로 바뀌어도 이미 확정된 미접수 보상은 재시도한다.
