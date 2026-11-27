@@ -1,7 +1,6 @@
 'use client';
 
 import { text, vars } from '@folioo/bud-tokens';
-import { useRouter } from 'next/navigation';
 import { BlurredLogoIcon } from '@/components/icons';
 
 import { Icon } from '@/components/ui/icon';
