@@ -3,7 +3,7 @@
 import { text, vars } from '@folioo/bud-tokens';
 import { useRouter } from 'next/navigation';
 import { BlurredLogoIcon } from '@/components/icons';
-import { Button } from '@/components/ui/button';
+
 import { Icon } from '@/components/ui/icon';
 import * as styles from './CommonErrorLayout.css';
 
@@ -14,16 +14,12 @@ type CommonErrorLayoutProps = {
 export default function CommonErrorLayout({
   isMobile,
 }: CommonErrorLayoutProps) {
-  const router = useRouter();
   const titleText = isMobile ? text.header.h4 : text.display;
   const descriptionText = isMobile
     ? text.caption.caption1.regular
     : text.body.body1.regular;
   const titleMargin = isMobile ? 'mt-[1.25rem]' : 'mt-[3.75rem]';
   const descriptionMargin = isMobile ? 'mt-[1.25rem]' : 'mt-[2.5rem]';
-  const buttonLayout = isMobile
-    ? 'mt-[2.5rem] px-[2.25rem] py-[0.75rem]'
-    : 'mt-[5rem] px-[2rem] py-[1.25rem]';
   const bottomPadding = isMobile ? 'pb-[2rem]' : 'pb-[3.125rem]';
 
   return (
@@ -51,18 +47,6 @@ export default function CommonErrorLayout({
           </a>
           으로 문의해 주세요.
         </p>
-
-        <Button
-          variant='primary'
-          size='fit'
-          textSize={isMobile ? 'medium' : 'large'}
-          fontWeight='bold'
-          radius='full'
-          className={`border-0 ${buttonLayout} ${isMobile ? '' : styles.desktopButton}`}
-          onClick={() => router.replace('/')}
-        >
-          메인 페이지로 이동
-        </Button>
       </div>
     </div>
   );
